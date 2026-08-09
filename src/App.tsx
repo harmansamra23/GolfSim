@@ -1,121 +1,135 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
 import './App.css'
 
+type ShotData = {
+  ballSpeed: number
+  clubSpeed: number
+  launchAngle: number
+  launchDirection: number
+  spinRate: number
+  carry: number
+}
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [shot, setShot] = useState<ShotData | null>(null)
+
+  function testShot() {
+    setShot({
+      ballSpeed: 148.7,
+      clubSpeed: 101.2,
+      launchAngle: 13.4,
+      launchDirection: 2.1,
+      spinRate: 2380,
+      carry: 251,
+    })
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
+    <main className="app">
+      <header>
         <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
+          <h1>GolfSim</h1>
+          <p>Plumas Lake Golf & Country Club</p>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+        <div className="connection">
+          <span className="status-dot"></span>
+          R10 Simulator
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
+      </header>
+
+      <section className="hole-info">
+        <div>
+          <span>HOLE</span>
+          <strong>1</strong>
+        </div>
+
+        <div>
+          <span>PAR</span>
+          <strong>4</strong>
+        </div>
+
+        <div>
+          <span>BLUE TEES</span>
+          <strong>409 YDS</strong>
         </div>
       </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <section className="simulator">
+        <div className="course-placeholder">
+          <p>PLUMAS LAKE</p>
+          <h2>Hole 1</h2>
+
+          <div className="flag">⚑</div>
+
+          <div className="fairway"></div>
+
+          <div className="tee">●</div>
+        </div>
+
+        <aside className="shot-panel">
+          <h2>SHOT DATA</h2>
+
+          <Stat
+            label="Ball Speed"
+            value={shot ? shot.ballSpeed.toFixed(1) : '--'}
+            unit="mph"
+          />
+
+          <Stat
+            label="Club Speed"
+            value={shot ? shot.clubSpeed.toFixed(1) : '--'}
+            unit="mph"
+          />
+
+          <Stat
+            label="Launch"
+            value={shot ? shot.launchAngle.toFixed(1) : '--'}
+            unit="°"
+          />
+
+          <Stat
+            label="Direction"
+            value={shot ? shot.launchDirection.toFixed(1) : '--'}
+            unit="°"
+          />
+
+          <Stat
+            label="Spin"
+            value={shot ? shot.spinRate.toString() : '--'}
+            unit="rpm"
+          />
+
+          <Stat
+            label="Carry"
+            value={shot ? shot.carry.toString() : '--'}
+            unit="yd"
+          />
+
+          <button onClick={testShot}>TEST SHOT</button>
+        </aside>
+      </section>
+    </main>
+  )
+}
+
+function Stat({
+  label,
+  value,
+  unit,
+}: {
+  label: string
+  value: string
+  unit: string
+}) {
+  return (
+    <div className="stat">
+      <span>{label}</span>
+
+      <strong>
+        {value} <small>{unit}</small>
+      </strong>
+    </div>
   )
 }
 
