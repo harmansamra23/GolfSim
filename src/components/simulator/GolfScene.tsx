@@ -1,112 +1,348 @@
-import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Sky } from '@react-three/drei'
-import { useEffect, useRef } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Sky } from '@react-three/drei'
+import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
+
+import type { ShotData, ShotResult } from '../../types/shot'
+
 import {
   getSurfaceAtPosition,
   getSurfacePhysics,
 } from '../../physics/surfacePhysics'
 
-type ShotData = {
-  id: number
-  ballSpeed: number
-  clubSpeed: number
-  launchAngle: number
-  launchDirection: number
-  spinRate: number
-  spinAxis: number
-  carry: number
-}
+import {
+  FAIRWAY_END_Z,
+  FAIRWAY_START_Z,
+  cartPathCenterX,
+  fairwayCenterX,
+  fairwayHalfWidth,
+  plumasLakeHole1,
+} from '../../courses/plumasLakeHole1'
+
+import { courseMaterials } from './CourseMaterials'
 
 type GolfSceneProps = {
   shot: ShotData | null
+  onShotResult: (result: ShotResult) => void
 }
 
-function GolfScene({ shot }: GolfSceneProps) {
+type BallPhase =
+  | 'ADDRESS'
+  | 'FLIGHT'
+  | 'LANDING'
+  | 'ROLLING'
+  | 'STOPPED'
+
+type BallState = {
+  position: THREE.Vector3
+  velocity: THREE.Vector3
+  phase: BallPhase
+}
+
+type BallStateReader = () => BallState
+
+type BallStateWriter = (
+  phase: BallPhase,
+  position: THREE.Vector3,
+  velocity: THREE.Vector3
+) => void
+
+const tracerCoreMaterial = new THREE.MeshBasicMaterial({
+  color: '#ffffff',
+})
+
+const tracerGlowMaterial = new THREE.MeshBasicMaterial({
+  color: '#9fdcff',
+  transparent: true,
+  opacity: 0.24,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+})
+
+function GolfScene({
+  shot,
+  onShotResult,
+}: GolfSceneProps) {
+  const ballState = useRef<BallState>({
+    position: new THREE.Vector3(
+      plumasLakeHole1.tee.x,
+      0.2,
+      plumasLakeHole1.tee.z
+    ),
+
+    velocity: new THREE.Vector3(),
+
+    phase: 'ADDRESS',
+  })
+
+  const getBallState: BallStateReader = () => {
+    return ballState.current
+  }
+
+  const setBallState: BallStateWriter = (
+    phase,
+    position,
+    velocity
+  ) => {
+    ballState.current.phase = phase
+    ballState.current.position.copy(position)
+    ballState.current.velocity.copy(velocity)
+  }
+
   return (
     <Canvas
       shadows
       dpr={[1, 2]}
       camera={{
-        position: [0, 2.4, 13],
-        fov: 58,
+        position: [0, 1.75, 14],
+        fov: 50,
         near: 0.1,
-        far: 700,
+        far: 1200,
       }}
       gl={{
         antialias: true,
         toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 1.08,
+        toneMappingExposure: 1.05,
       }}
     >
-      <color attach="background" args={['#9dcfee']} />
-      <fog attach="fog" args={['#9dcfee', 180, 520]} />
+      <color attach="background" args={['#9bcbe6']} />
+
+      <fog
+        attach="fog"
+        args={['#9bcbe6', 260, 900]}
+      />
 
       <Sky
         distance={450000}
-        sunPosition={[90, 35, 40]}
+        sunPosition={[80, 30, 45]}
         turbidity={7}
-        rayleigh={1.8}
+        rayleigh={1.7}
       />
 
       <hemisphereLight
-        intensity={1.35}
-        color="#e5f4ff"
-        groundColor="#355234"
+        intensity={1.2}
+        color="#e8f5ff"
+        groundColor="#294c2c"
       />
 
       <directionalLight
-        position={[45, 65, 30]}
-        intensity={2.4}
+        position={[50, 70, 35]}
+        intensity={2.5}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
+        shadow-camera-left={-90}
+        shadow-camera-right={90}
+        shadow-camera-top={90}
+        shadow-camera-bottom={-90}
+        shadow-camera-near={1}
+        shadow-camera-far={260}
+        shadow-bias={-0.00025}
       />
 
       <GolfCourse />
 
-      <AnimatedGolfBall shot={shot} />
-
-      <OrbitControls
-        target={[0, 1.25, -105]}
-        enableDamping
-        dampingFactor={0.08}
-        minDistance={4}
-        maxDistance={120}
-        maxPolarAngle={Math.PI / 2.03}
+      <AnimatedGolfBall
+        shot={shot}
+        setBallState={setBallState}
+        onShotResult={onShotResult}
       />
+
+      <CameraRig getBallState={getBallState} />
     </Canvas>
   )
 }
 
+/* =========================================================
+   CAMERA
+   ========================================================= */
+
+function CameraRig({
+  getBallState,
+}: {
+  getBallState: BallStateReader
+}) {
+  const { camera } = useThree()
+
+  const desiredPosition = useRef(
+    new THREE.Vector3()
+  )
+
+  const desiredTarget = useRef(
+    new THREE.Vector3()
+  )
+
+  useFrame((_, delta) => {
+    const state = getBallState()
+    const ball = state.position
+
+    if (state.phase === 'ADDRESS') {
+      desiredPosition.current.set(
+        plumasLakeHole1.tee.x,
+        1.8,
+        plumasLakeHole1.tee.z + 10
+      )
+
+      desiredTarget.current.set(
+        fairwayCenterX(-80),
+        1,
+        -80
+      )
+    }
+
+    if (state.phase === 'FLIGHT') {
+      desiredPosition.current.set(
+        ball.x,
+        ball.y + 5.5,
+        ball.z + 12
+      )
+
+      desiredTarget.current.set(
+        ball.x,
+        ball.y + 1,
+        ball.z - 10
+      )
+    }
+
+    if (state.phase === 'LANDING') {
+      desiredPosition.current.set(
+        ball.x + 7,
+        ball.y + 5,
+        ball.z + 13
+      )
+
+      desiredTarget.current.copy(ball)
+    }
+
+    if (state.phase === 'ROLLING') {
+      desiredPosition.current.set(
+        ball.x + 6,
+        4,
+        ball.z + 10
+      )
+
+      desiredTarget.current.set(
+        ball.x,
+        0.3,
+        ball.z
+      )
+    }
+
+    if (state.phase === 'STOPPED') {
+      desiredPosition.current.set(
+        ball.x + 7,
+        4.5,
+        ball.z + 10
+      )
+
+      desiredTarget.current.set(
+        ball.x,
+        0.3,
+        ball.z
+      )
+    }
+
+    const smoothing =
+      1 - Math.exp(-4 * delta)
+
+    camera.position.lerp(
+      desiredPosition.current,
+      smoothing
+    )
+
+    camera.lookAt(
+      desiredTarget.current
+    )
+  })
+
+  return null
+}
+
+/* =========================================================
+   BALL + PHYSICS + TRACER
+   ========================================================= */
+
 function AnimatedGolfBall({
   shot,
+  setBallState,
+  onShotResult,
 }: {
   shot: ShotData | null
+  setBallState: BallStateWriter
+  onShotResult: (result: ShotResult) => void
 }) {
   const ballRef = useRef<THREE.Mesh>(null)
-  const tracerGroupRef = useRef<THREE.Group>(null)
+  const tracerRef = useRef<THREE.Group>(null)
 
   const position = useRef(
-    new THREE.Vector3(0, 0.24, 5)
+    new THREE.Vector3(
+      plumasLakeHole1.tee.x,
+      0.2,
+      plumasLakeHole1.tee.z
+    )
+  )
+
+  const startPosition = useRef(
+    new THREE.Vector3(
+      plumasLakeHole1.tee.x,
+      0.2,
+      plumasLakeHole1.tee.z
+    )
   )
 
   const velocity = useRef(
     new THREE.Vector3()
   )
 
+  const currentShot =
+    useRef<ShotData | null>(null)
+
+  const lastShotId =
+    useRef<number | null>(null)
+
   const active = useRef(false)
+
   const rolling = useRef(false)
+
   const bounceCount = useRef(0)
 
-  const tracerPoints = useRef<THREE.Vector3[]>([
-    new THREE.Vector3(0, 0.24, 5),
-  ])
+  const phase = useRef<BallPhase>('ADDRESS')
 
-  useEffect(() => {
-    if (!shot) return
+  const carryReported = useRef(false)
 
-    position.current.set(0, 0.24, 5)
+  const carryYards = useRef(0)
+
+  const tracerPoints =
+    useRef<THREE.Vector3[]>([])
+
+  function clearTracer() {
+    if (!tracerRef.current) return
+
+    tracerRef.current.traverse(
+      (object) => {
+        if (object instanceof THREE.Mesh) {
+          object.geometry.dispose()
+        }
+      }
+    )
+
+    tracerRef.current.clear()
+  }
+
+  function startShot(
+    newShot: ShotData
+  ) {
+    currentShot.current = newShot
+
+    position.current.set(
+      plumasLakeHole1.tee.x,
+      0.2,
+      plumasLakeHole1.tee.z
+    )
+
+    startPosition.current.copy(
+      position.current
+    )
 
     if (ballRef.current) {
       ballRef.current.position.copy(
@@ -114,140 +350,212 @@ function AnimatedGolfBall({
       )
     }
 
-    tracerPoints.current = [
-      new THREE.Vector3(0, 0.24, 5),
-    ]
+    clearTracer()
 
-    if (tracerGroupRef.current) {
-      tracerGroupRef.current.clear()
-    }
+    tracerPoints.current = [
+      position.current.clone(),
+    ]
 
     bounceCount.current = 0
     rolling.current = false
+    carryReported.current = false
+    carryYards.current = 0
 
     const speed =
-      shot.ballSpeed * 0.44704
+      newShot.ballSpeed * 0.44704
 
     const launchAngle =
       THREE.MathUtils.degToRad(
-        shot.launchAngle
+        newShot.launchAngle
       )
 
-    const launchDirection =
+    const direction =
       THREE.MathUtils.degToRad(
-        shot.launchDirection
+        newShot.launchDirection
       )
 
-    const horizontalSpeed =
+    const horizontal =
       speed * Math.cos(launchAngle)
 
     velocity.current.set(
-      horizontalSpeed *
-        Math.sin(launchDirection),
+      horizontal * Math.sin(direction),
 
-      speed *
-        Math.sin(launchAngle),
+      speed * Math.sin(launchAngle),
 
-      -horizontalSpeed *
-        Math.cos(launchDirection)
+      -horizontal * Math.cos(direction)
     )
 
     active.current = true
-  }, [shot])
+
+    phase.current = 'FLIGHT'
+
+    setBallState(
+      phase.current,
+      position.current,
+      velocity.current
+    )
+  }
 
   useFrame((_, delta) => {
-    if (!active.current) return
+    if (
+      shot &&
+      shot.id !== lastShotId.current
+    ) {
+      lastShotId.current = shot.id
+      startShot(shot)
+    }
+
+    if (!active.current) {
+      return
+    }
+
+    const current =
+      currentShot.current
+
+    if (!current) {
+      return
+    }
 
     const dt =
       Math.min(delta, 0.02)
 
+    /* -------------------------
+       AIRBORNE
+       ------------------------- */
+
     if (!rolling.current) {
-      // GRAVITY
       velocity.current.y -=
         9.81 * dt
 
-      // DRAG
       const drag = 0.994
 
       velocity.current.multiplyScalar(
-        Math.pow(drag, dt * 60)
+        Math.pow(
+          drag,
+          dt * 60
+        )
       )
 
-      if (shot) {
-        // CURVE
-        const curveStrength =
-          shot.spinAxis * 0.0007
+      const speed =
+        velocity.current.length()
 
-        velocity.current.x +=
-          curveStrength *
-          velocity.current.length() *
-          dt
+      /* SIDE CURVE */
 
-        // BACKSPIN LIFT
-        const liftStrength =
-          shot.spinRate * 0.000013
+      velocity.current.x +=
+        current.spinAxis *
+        0.0007 *
+        speed *
+        dt
 
-        velocity.current.y +=
-          liftStrength *
-          velocity.current.length() *
-          dt
-      }
+      /* BACKSPIN LIFT */
+
+      velocity.current.y +=
+        current.spinRate *
+        0.000013 *
+        speed *
+        dt
 
       position.current.addScaledVector(
         velocity.current,
         dt
       )
 
-      // LANDING
+      /* Landing camera */
+
       if (
-  position.current.y <= 0.2 &&
-  velocity.current.y < 0
-) {
-  position.current.y = 0.2
+        velocity.current.y < 0 &&
+        position.current.y < 8
+      ) {
+        phase.current = 'LANDING'
+      }
 
-  const surface =
-    getSurfaceAtPosition(
-      position.current.x,
-      position.current.z
-    )
+      /* IMPACT */
 
-  const surfacePhysics =
-    getSurfacePhysics(surface)
+      if (
+        position.current.y <= 0.2 &&
+        velocity.current.y < 0
+      ) {
+        position.current.y = 0.2
 
-  bounceCount.current += 1
+        const surface =
+          getSurfaceAtPosition(
+            position.current.x,
+            position.current.z
+          )
 
-  const verticalImpact =
-    Math.abs(
-      velocity.current.y
-    )
+        const physics =
+          getSurfacePhysics(surface)
 
-  const bounceMultiplier =
-    bounceCount.current === 1
-      ? surfacePhysics.bounce
-      : surfacePhysics.bounce * 0.55
+        /* Calculate actual carry */
 
-  velocity.current.y =
-    verticalImpact *
-    bounceMultiplier
+        if (!carryReported.current) {
+          const dx =
+            position.current.x -
+            startPosition.current.x
 
-  velocity.current.x *=
-    surfacePhysics.horizontalRetention
+          const dz =
+            position.current.z -
+            startPosition.current.z
 
-  velocity.current.z *=
-    surfacePhysics.horizontalRetention
+          const carryMeters =
+            Math.sqrt(
+              dx * dx +
+              dz * dz
+            )
 
-  if (
-    bounceCount.current >= 3 ||
-    velocity.current.y < 1.0 ||
-    surface === 'BUNKER'
-  ) {
-    velocity.current.y = 0
-    rolling.current = true
-  }
-}
-    } else {
-      // ROLLING
+          carryYards.current =
+            carryMeters * 1.09361
 
+          carryReported.current = true
+
+          onShotResult({
+            id: current.id,
+            carry: carryYards.current,
+            lie: surface,
+          })
+        }
+
+        bounceCount.current += 1
+
+        const impactSpeed =
+          Math.abs(
+            velocity.current.y
+          )
+
+        const bounceMultiplier =
+          bounceCount.current === 1
+            ? physics.bounce
+            : physics.bounce * 0.52
+
+        velocity.current.y =
+          impactSpeed *
+          bounceMultiplier
+
+        velocity.current.x *=
+          physics.horizontalRetention
+
+        velocity.current.z *=
+          physics.horizontalRetention
+
+        if (
+          surface === 'BUNKER' ||
+          bounceCount.current >= 3 ||
+          velocity.current.y < 0.9
+        ) {
+          velocity.current.y = 0
+
+          rolling.current = true
+
+          phase.current = 'ROLLING'
+        }
+      }
+    }
+
+    /* -------------------------
+       ROLLING
+       ------------------------- */
+
+    else {
       position.current.y = 0.2
 
       position.current.x +=
@@ -256,37 +564,33 @@ function AnimatedGolfBall({
       position.current.z +=
         velocity.current.z * dt
 
-      // Fairway rolling resistance
       const surface =
-  getSurfaceAtPosition(
-    position.current.x,
-    position.current.z
-  )
+        getSurfaceAtPosition(
+          position.current.x,
+          position.current.z
+        )
 
-const surfacePhysics =
-  getSurfacePhysics(surface)
+      const physics =
+        getSurfacePhysics(surface)
 
-const rollingFriction =
-  Math.pow(
-    surfacePhysics.rollingFriction,
-    dt * 60
-  )
+      const friction =
+        Math.pow(
+          physics.rollingFriction,
+          dt * 60
+        )
 
-velocity.current.x *=
-  rollingFriction
+      velocity.current.x *= friction
+      velocity.current.z *= friction
 
-velocity.current.z *=
-  rollingFriction
-
-      const horizontalSpeed =
+      const groundSpeed =
         Math.sqrt(
           velocity.current.x *
             velocity.current.x +
-            velocity.current.z *
-              velocity.current.z
+          velocity.current.z *
+            velocity.current.z
         )
 
-      if (horizontalSpeed < 0.35) {
+      if (groundSpeed < 0.4) {
         velocity.current.set(
           0,
           0,
@@ -294,8 +598,40 @@ velocity.current.z *=
         )
 
         active.current = false
+
+        phase.current = 'STOPPED'
+
+        const dx =
+          position.current.x -
+          startPosition.current.x
+
+        const dz =
+          position.current.z -
+          startPosition.current.z
+
+        const totalMeters =
+          Math.sqrt(
+            dx * dx +
+            dz * dz
+          )
+
+        const finalSurface =
+          getSurfaceAtPosition(
+            position.current.x,
+            position.current.z
+          )
+
+        onShotResult({
+          id: current.id,
+          carry: carryYards.current,
+          totalDistance:
+            totalMeters * 1.09361,
+          lie: finalSurface,
+        })
       }
     }
+
+    /* Update ball mesh */
 
     if (ballRef.current) {
       ballRef.current.position.copy(
@@ -305,47 +641,52 @@ velocity.current.z *=
       ballRef.current.rotation.x +=
         velocity.current.z *
         dt *
-        0.09
+        0.08
 
       ballRef.current.rotation.z -=
         velocity.current.x *
         dt *
-        0.09
+        0.08
     }
 
-    // TRACER ONLY WHILE BALL IS IN AIR
+    /* Update camera state */
+
+    setBallState(
+      phase.current,
+      position.current,
+      velocity.current
+    )
+
+    /* -------------------------
+       TRACER
+       ------------------------- */
+
     if (!rolling.current) {
-      const previousPoint =
+      const previous =
         tracerPoints.current[
-          tracerPoints.current.length -
-            1
+          tracerPoints.current.length - 1
         ]
 
       if (
-        !previousPoint ||
-        previousPoint.distanceTo(
+        !previous ||
+        previous.distanceTo(
           position.current
-        ) > 1.1
+        ) > 0.9
       ) {
-        const newPoint =
+        const next =
           position.current.clone()
 
-        tracerPoints.current.push(
-          newPoint
-        )
+        tracerPoints.current.push(next)
 
         if (
-          tracerGroupRef.current &&
-          previousPoint
+          previous &&
+          tracerRef.current
         ) {
-          const segment =
+          tracerRef.current.add(
             createTracerSegment(
-              previousPoint,
-              newPoint
+              previous,
+              next
             )
-
-          tracerGroupRef.current.add(
-            segment
           )
         }
       }
@@ -354,24 +695,26 @@ velocity.current.z *=
 
   return (
     <>
-      {/* BALL */}
       <mesh
         ref={ballRef}
-        position={[0, 0.24, 5]}
+        position={[
+          plumasLakeHole1.tee.x,
+          0.2,
+          plumasLakeHole1.tee.z,
+        ]}
         castShadow
       >
         <sphereGeometry
-          args={[0.14, 32, 32]}
+          args={[0.18, 32, 32]}
         />
 
         <meshStandardMaterial
           color="#ffffff"
-          roughness={0.2}
+          roughness={0.18}
         />
       </mesh>
 
-      {/* TRACER */}
-      <group ref={tracerGroupRef} />
+      <group ref={tracerRef} />
     </>
   )
 }
@@ -391,116 +734,246 @@ function createTracerSegment(
 
   const midpoint =
     new THREE.Vector3()
-      .addVectors(start, end)
+      .addVectors(
+        start,
+        end
+      )
       .multiplyScalar(0.5)
 
-  const geometry =
-    new THREE.CylinderGeometry(
-      0.10,
-      0.10,
-      length,
-      8
-    )
+  const group =
+    new THREE.Group()
 
-  const material =
-    new THREE.MeshBasicMaterial({
-      color: '#ffffff',
-      transparent: true,
-      opacity: 0.9,
-    })
-
-  const segment =
+  const core =
     new THREE.Mesh(
-      geometry,
-      material
+      new THREE.CylinderGeometry(
+        0.055,
+        0.055,
+        length,
+        7
+      ),
+
+      tracerCoreMaterial
     )
 
-  segment.position.copy(
-    midpoint
-  )
+  const glow =
+    new THREE.Mesh(
+      new THREE.CylinderGeometry(
+        0.12,
+        0.12,
+        length,
+        7
+      ),
 
-  segment.quaternion.setFromUnitVectors(
-    new THREE.Vector3(0, 1, 0),
+      tracerGlowMaterial
+    )
+
+  const orientation =
     direction
       .clone()
       .normalize()
+
+  core.position.copy(midpoint)
+
+  core.quaternion.setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0),
+    orientation
   )
 
-  return segment
+  glow.position.copy(midpoint)
+
+  glow.quaternion.copy(
+    core.quaternion
+  )
+
+  group.add(core)
+  group.add(glow)
+
+  return group
+}
+
+/* =========================================================
+   COURSE GEOMETRY
+   ========================================================= */
+
+function createCourseShape(
+  extraWidth: number
+) {
+  const shape =
+    new THREE.Shape()
+
+  const steps = 60
+
+  for (
+    let i = 0;
+    i <= steps;
+    i++
+  ) {
+    const t =
+      i / steps
+
+    const z =
+      THREE.MathUtils.lerp(
+        FAIRWAY_START_Z,
+        FAIRWAY_END_Z,
+        t
+      )
+
+    const x =
+      fairwayCenterX(z) -
+      fairwayHalfWidth(z) -
+      extraWidth
+
+    if (i === 0) {
+      shape.moveTo(x, z)
+    } else {
+      shape.lineTo(x, z)
+    }
+  }
+
+  for (
+    let i = steps;
+    i >= 0;
+    i--
+  ) {
+    const t =
+      i / steps
+
+    const z =
+      THREE.MathUtils.lerp(
+        FAIRWAY_START_Z,
+        FAIRWAY_END_Z,
+        t
+      )
+
+    const x =
+      fairwayCenterX(z) +
+      fairwayHalfWidth(z) +
+      extraWidth
+
+    shape.lineTo(x, z)
+  }
+
+  shape.closePath()
+
+  return shape
+}
+
+function createCartPathShape() {
+  const shape =
+    new THREE.Shape()
+
+  const steps = 60
+  const halfWidth = 1.35
+
+  for (
+    let i = 0;
+    i <= steps;
+    i++
+  ) {
+    const t =
+      i / steps
+
+    const z =
+      THREE.MathUtils.lerp(
+        FAIRWAY_START_Z,
+        FAIRWAY_END_Z,
+        t
+      )
+
+    const x =
+      cartPathCenterX(z) -
+      halfWidth
+
+    if (i === 0) {
+      shape.moveTo(x, z)
+    } else {
+      shape.lineTo(x, z)
+    }
+  }
+
+  for (
+    let i = steps;
+    i >= 0;
+    i--
+  ) {
+    const t =
+      i / steps
+
+    const z =
+      THREE.MathUtils.lerp(
+        FAIRWAY_START_Z,
+        FAIRWAY_END_Z,
+        t
+      )
+
+    shape.lineTo(
+      cartPathCenterX(z) +
+        halfWidth,
+      z
+    )
+  }
+
+  shape.closePath()
+
+  return shape
 }
 
 function GolfCourse() {
+  const firstCutShape =
+    useMemo(
+      () =>
+        createCourseShape(4),
+      []
+    )
+
   const fairwayShape =
-    new THREE.Shape()
+    useMemo(
+      () =>
+        createCourseShape(0),
+      []
+    )
 
-  fairwayShape.moveTo(-9, 4)
-
-  fairwayShape.bezierCurveTo(
-    -11,
-    -25,
-    -19,
-    -55,
-    -18,
-    -88
-  )
-
-  fairwayShape.bezierCurveTo(
-    -17,
-    -125,
-    -10,
-    -155,
-    -12,
-    -185
-  )
-
-  fairwayShape.bezierCurveTo(
-    -14,
-    -205,
-    -11,
-    -222,
-    -8,
-    -235
-  )
-
-  fairwayShape.lineTo(8, -235)
-
-  fairwayShape.bezierCurveTo(
-    11,
-    -222,
-    14,
-    -205,
-    12,
-    -185
-  )
-
-  fairwayShape.bezierCurveTo(
-    10,
-    -155,
-    17,
-    -125,
-    18,
-    -88
-  )
-
-  fairwayShape.bezierCurveTo(
-    19,
-    -55,
-    11,
-    -25,
-    9,
-    4
-  )
-
-  fairwayShape.closePath()
+  const pathShape =
+    useMemo(
+      () =>
+        createCartPathShape(),
+      []
+    )
 
   return (
     <>
       <Terrain />
-      <TeeBox />
+
+      {/* FIRST CUT */}
 
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0.11, 0]}
+        position={[0, 0.025, 0]}
+        receiveShadow
+      >
+        <shapeGeometry
+          args={[firstCutShape]}
+        />
+
+        <meshStandardMaterial
+          map={
+            courseMaterials.firstCut.map
+          }
+          normalMap={
+            courseMaterials.firstCut.normalMap
+          }
+          roughnessMap={
+            courseMaterials.firstCut.roughnessMap
+          }
+          roughness={0.96}
+        />
+      </mesh>
+
+      {/* FAIRWAY */}
+
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.04, 0]}
         receiveShadow
       >
         <shapeGeometry
@@ -508,22 +981,64 @@ function GolfCourse() {
         />
 
         <meshStandardMaterial
-          color="#568f45"
-          roughness={0.94}
+          map={
+            courseMaterials.fairway.map
+          }
+          normalMap={
+            courseMaterials.fairway.normalMap
+          }
+          roughnessMap={
+            courseMaterials.fairway.roughnessMap
+          }
+          roughness={0.88}
         />
       </mesh>
 
+      {/* CART PATH */}
+
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.05, 0]}
+        receiveShadow
+      >
+        <shapeGeometry
+          args={[pathShape]}
+        />
+
+        <meshStandardMaterial
+          map={
+            courseMaterials.path.map
+          }
+          normalMap={
+            courseMaterials.path.normalMap
+          }
+          roughnessMap={
+            courseMaterials.path.roughnessMap
+          }
+          roughness={1}
+        />
+      </mesh>
+
+      <TeeBox />
       <Green />
 
-      <Bunker
-        position={[-13, 0.17, -224]}
-        scale={[1.4, 0.65, 1]}
-      />
-
-      <Bunker
-        position={[13, 0.17, -228]}
-        scale={[1.25, 0.58, 1]}
-      />
+      {plumasLakeHole1.bunkers.map(
+        (bunker, index) => (
+          <Bunker
+            key={index}
+            center={[
+              bunker.center.x,
+              bunker.center.z,
+            ]}
+            radiusX={
+              bunker.radiusX
+            }
+            radiusZ={
+              bunker.radiusZ
+            }
+          />
+        )
+      )}
 
       <Flag />
 
@@ -533,59 +1048,26 @@ function GolfCourse() {
 }
 
 function Terrain() {
-  const geometry =
-    new THREE.PlaneGeometry(
-      220,
-      500,
-      70,
-      150
-    )
-
-  const positions =
-    geometry.attributes.position
-
-  for (
-    let i = 0;
-    i < positions.count;
-    i++
-  ) {
-    const x =
-      positions.getX(i)
-
-    const y =
-      positions.getY(i)
-
-    const forwardRoll =
-      Math.sin(y * 0.013) * 0.7
-
-    const crossSlope =
-      Math.sin(x * 0.035) * 0.4
-
-    const outsideLift =
-      Math.pow(
-        Math.abs(x) / 110,
-        2
-      ) * 1.2
-
-    positions.setZ(
-      i,
-      forwardRoll +
-        crossSlope +
-        outsideLift
-    )
-  }
-
-  geometry.computeVertexNormals()
-
   return (
     <mesh
-      geometry={geometry}
       rotation={[-Math.PI / 2, 0, 0]}
-      position={[0, -0.08, -125]}
+      position={[0, 0, -180]}
       receiveShadow
     >
+      <planeGeometry
+        args={[280, 820]}
+      />
+
       <meshStandardMaterial
-        color="#315d34"
+        map={
+          courseMaterials.rough.map
+        }
+        normalMap={
+          courseMaterials.rough.normalMap
+        }
+        roughnessMap={
+          courseMaterials.rough.roughnessMap
+        }
         roughness={1}
       />
     </mesh>
@@ -597,111 +1079,222 @@ function TeeBox() {
     <>
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0.13, 5]}
+        position={[
+          plumasLakeHole1.tee.x,
+          0.055,
+          plumasLakeHole1.tee.z,
+        ]}
         receiveShadow
       >
-        <planeGeometry args={[10, 8]} />
+        <planeGeometry
+          args={[11, 8]}
+        />
 
         <meshStandardMaterial
-          color="#74a95a"
+          map={
+            courseMaterials.tee.map
+          }
+          normalMap={
+            courseMaterials.tee.normalMap
+          }
+          roughnessMap={
+            courseMaterials.tee.roughnessMap
+          }
+          roughness={0.82}
         />
       </mesh>
 
-      <TeeMarker
-        position={[-1.45, 0.22, 5]}
-      />
-
-      <TeeMarker
-        position={[1.45, 0.22, 5]}
-      />
+      <TeeMarker x={-1.5} />
+      <TeeMarker x={1.5} />
     </>
   )
 }
 
 function TeeMarker({
-  position,
+  x,
 }: {
-  position: [number, number, number]
+  x: number
 }) {
   return (
     <mesh
-      position={position}
+      position={[
+        plumasLakeHole1.tee.x + x,
+        0.22,
+        plumasLakeHole1.tee.z,
+      ]}
       castShadow
     >
       <sphereGeometry
-        args={[0.22, 24, 24]}
+        args={[0.23, 20, 20]}
       />
 
       <meshStandardMaterial
-        color="#255bc7"
+        color="#1f5fc9"
+        roughness={0.4}
       />
     </mesh>
   )
 }
 
 function Green() {
+  const green =
+    plumasLakeHole1.green
+
   return (
     <>
+      {/* FRINGE */}
+
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0.13, -238]}
-        scale={[1.15, 0.9, 1]}
+        position={[
+          green.center.x,
+          0.055,
+          green.center.z,
+        ]}
+        scale={[
+          green.radiusX + 4,
+          green.radiusZ + 4,
+          1,
+        ]}
         receiveShadow
       >
         <circleGeometry
-          args={[20, 64]}
+          args={[1, 64]}
         />
 
         <meshStandardMaterial
-          color="#467a3e"
+          map={
+            courseMaterials.firstCut.map
+          }
+          normalMap={
+            courseMaterials.firstCut.normalMap
+          }
+          roughnessMap={
+            courseMaterials.firstCut.roughnessMap
+          }
+          roughness={0.9}
         />
       </mesh>
 
+      {/* PUTTING SURFACE */}
+
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0.15, -238]}
-        scale={[1.08, 0.82, 1]}
+        position={[
+          green.center.x,
+          0.07,
+          green.center.z,
+        ]}
+        scale={[
+          green.radiusX,
+          green.radiusZ,
+          1,
+        ]}
         receiveShadow
       >
         <circleGeometry
-          args={[16.5, 64]}
+          args={[1, 64]}
         />
 
         <meshStandardMaterial
-          color="#80b65e"
+          map={
+            courseMaterials.green.map
+          }
+          normalMap={
+            courseMaterials.green.normalMap
+          }
+          roughnessMap={
+            courseMaterials.green.roughnessMap
+          }
+          roughness={0.7}
         />
       </mesh>
     </>
   )
 }
 
+function Bunker({
+  center,
+  radiusX,
+  radiusZ,
+}: {
+  center: [number, number]
+  radiusX: number
+  radiusZ: number
+}) {
+  return (
+    <mesh
+      rotation={[-Math.PI / 2, 0, 0]}
+      position={[
+        center[0],
+        0.08,
+        center[1],
+      ]}
+      scale={[
+        radiusX,
+        radiusZ,
+        1,
+      ]}
+      receiveShadow
+    >
+      <circleGeometry
+        args={[1, 64]}
+      />
+
+      <meshStandardMaterial
+        map={
+          courseMaterials.sand.map
+        }
+        normalMap={
+          courseMaterials.sand.normalMap
+        }
+        roughnessMap={
+          courseMaterials.sand.roughnessMap
+        }
+        roughness={1}
+      />
+    </mesh>
+  )
+}
+
 function Flag() {
+  const green =
+    plumasLakeHole1.green
+
   return (
     <>
       <mesh
-        position={[0, 2.3, -238]}
+        position={[
+          green.center.x,
+          2.25,
+          green.center.z,
+        ]}
         castShadow
       >
         <cylinderGeometry
           args={[
-            0.03,
-            0.03,
+            0.025,
+            0.025,
             4.3,
             12,
           ]}
         />
 
         <meshStandardMaterial
-          color="#f4f4f4"
+          color="#f5f5f5"
         />
       </mesh>
 
       <mesh
-        position={[0.7, 3.7, -238]}
+        position={[
+          green.center.x + 0.7,
+          3.7,
+          green.center.z,
+        ]}
         castShadow
       >
         <planeGeometry
-          args={[1.4, 0.7]}
+          args={[1.4, 0.72]}
         />
 
         <meshStandardMaterial
@@ -713,68 +1306,62 @@ function Flag() {
   )
 }
 
-function Bunker({
-  position,
-  scale,
-}: {
-  position: [number, number, number]
+/* =========================================================
+   TEMPORARY TREES
+   ========================================================= */
 
-  scale: [number, number, number]
-}) {
-  return (
-    <mesh
-      rotation={[-Math.PI / 2, 0, 0]}
-      position={position}
-      scale={scale}
-      receiveShadow
-    >
-      <circleGeometry
-        args={[5, 48]}
-      />
+const leftTrees = [
+  [-24, -25, 1.1],
+  [-28, -50, 1.25],
+  [-31, -78, 1.0],
+  [-33, -108, 1.3],
+  [-34, -140, 1.1],
+  [-33, -172, 1.25],
+  [-31, -205, 1.05],
+  [-30, -238, 1.2],
+  [-29, -270, 1.15],
+  [-27, -300, 1.25],
+  [-26, -330, 1.05],
+] as const
 
-      <meshStandardMaterial
-        color="#d9c59b"
-      />
-    </mesh>
-  )
-}
+const rightTrees = [
+  [25, -28, 1.15],
+  [29, -55, 1.0],
+  [32, -82, 1.3],
+  [34, -112, 1.1],
+  [35, -145, 1.25],
+  [34, -178, 1.05],
+  [33, -210, 1.2],
+  [32, -243, 1.1],
+  [30, -276, 1.25],
+  [28, -307, 1.0],
+  [27, -335, 1.15],
+] as const
 
 function TreeLine() {
-  const left = [
-    [-22, 0, -25, 1.05],
-    [-25, 0, -47, 1.2],
-    [-28, 0, -70, 1.05],
-    [-29, 0, -94, 1.25],
-    [-28, 0, -119, 1.05],
-    [-27, 0, -145, 1.2],
-  ] as const
-
-  const right = [
-    [22, 0, -27, 1.1],
-    [25, 0, -49, 1],
-    [28, 0, -73, 1.2],
-    [29, 0, -97, 1.1],
-    [28, 0, -122, 1.25],
-    [27, 0, -148, 1],
-  ] as const
-
   return (
     <>
-      {left.map(
-        ([x, y, z, scale], index) => (
+      {leftTrees.map(
+        (
+          [x, z, scale],
+          index
+        ) => (
           <Tree
             key={`left-${index}`}
-            position={[x, y, z]}
+            position={[x, 0, z]}
             scale={scale}
           />
         )
       )}
 
-      {right.map(
-        ([x, y, z, scale], index) => (
+      {rightTrees.map(
+        (
+          [x, z, scale],
+          index
+        ) => (
           <Tree
             key={`right-${index}`}
-            position={[x, y, z]}
+            position={[x, 0, z]}
             scale={scale}
           />
         )
@@ -785,11 +1372,15 @@ function TreeLine() {
 
 function Tree({
   position,
-  scale = 1,
+  scale,
 }: {
-  position: [number, number, number]
+  position: [
+    number,
+    number,
+    number,
+  ]
 
-  scale?: number
+  scale: number
 }) {
   return (
     <group
@@ -797,34 +1388,79 @@ function Tree({
       scale={scale}
     >
       <mesh
-        position={[0, 2.5, 0]}
+        position={[0, 2.7, 0]}
         castShadow
       >
         <cylinderGeometry
           args={[
             0.3,
-            0.43,
-            5,
+            0.5,
+            5.4,
             10,
           ]}
         />
 
         <meshStandardMaterial
-          color="#5b402c"
+          color="#503a29"
+          roughness={1}
         />
       </mesh>
 
       <mesh
-        position={[0, 6.2, 0]}
-        scale={[1.3, 0.85, 1.2]}
+        position={[0, 6.4, 0]}
+        scale={[
+          1.35,
+          0.9,
+          1.15,
+        ]}
         castShadow
       >
-        <sphereGeometry
-          args={[2.4, 18, 18]}
+        <dodecahedronGeometry
+          args={[2.5, 1]}
         />
 
         <meshStandardMaterial
-          color="#2b6532"
+          color="#285e31"
+          roughness={1}
+          flatShading
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          1.5,
+          5.8,
+          0.3,
+        ]}
+        castShadow
+      >
+        <dodecahedronGeometry
+          args={[1.8, 1]}
+        />
+
+        <meshStandardMaterial
+          color="#34713a"
+          roughness={1}
+          flatShading
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          -1.5,
+          5.9,
+          -0.2,
+        ]}
+        castShadow
+      >
+        <dodecahedronGeometry
+          args={[1.7, 1]}
+        />
+
+        <meshStandardMaterial
+          color="#306936"
+          roughness={1}
+          flatShading
         />
       </mesh>
     </group>

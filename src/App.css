@@ -1,19 +1,27 @@
 #root {
   width: 100%;
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 .app {
   min-height: 100vh;
-  padding: 32px;
+  padding: 18px;
   background:
-    linear-gradient(rgba(5, 20, 12, 0.3), rgba(5, 20, 12, 0.7)),
-    #102d1c;
-  color: white;
+    radial-gradient(
+      circle at top,
+      #0b2819,
+      #04110b 70%
+    );
+  color: #f4f7f5;
 }
 
 header {
-  max-width: 1400px;
-  margin: 0 auto 25px;
+  max-width: 1600px;
+  margin: 0 auto 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -21,161 +29,217 @@ header {
 
 header h1 {
   margin: 0;
-  font-size: 42px;
+  font-size: 32px;
+  letter-spacing: -1px;
 }
 
 header p {
-  margin-top: 4px;
-  color: #a8b9ad;
+  margin: 4px 0 0;
+  color: #9fb0a6;
 }
 
 .connection {
-  background: rgba(255, 255, 255, 0.08);
-  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  border: 1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.1
+    );
   border-radius: 30px;
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.05
+    );
+  font-size: 13px;
+  letter-spacing: 1px;
 }
 
 .status-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   margin-right: 8px;
   border-radius: 50%;
-  background: #f0b429;
+  background: #e4b849;
 }
 
 .hole-info {
-  max-width: 1400px;
+  max-width: 1600px;
   margin: auto;
   display: flex;
-  gap: 40px;
-  padding: 18px 24px;
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 14px 14px 0 0;
+  align-items: center;
+  gap: 48px;
+  padding: 15px 22px;
+  background:
+    rgba(
+      4,
+      18,
+      11,
+      0.94
+    );
+  border-radius:
+    14px 14px 0 0;
 }
 
 .hole-info div {
   display: flex;
   flex-direction: column;
+  min-width: 70px;
 }
 
 .hole-info span {
-  font-size: 11px;
-  color: #9fb0a5;
-  letter-spacing: 1.5px;
+  margin-bottom: 4px;
+  color: #8fa299;
+  font-size: 10px;
+  letter-spacing: 1.6px;
 }
 
 .hole-info strong {
-  font-size: 21px;
+  font-size: 20px;
 }
 
 .simulator {
-  max-width: 1400px;
-  height: 650px;
+  max-width: 1600px;
+  height: min(
+    78vh,
+    820px
+  );
+  min-height: 640px;
   margin: auto;
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns:
+    minmax(0, 1fr)
+    330px;
   overflow: hidden;
-  border-radius: 0 0 14px 14px;
-  background: #173e25;
+  border-radius:
+    0 0 14px 14px;
+  background: #07110c;
 }
 
-.course-placeholder {
+.course-3d {
   position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
   overflow: hidden;
-  text-align: center;
-  background:
-    linear-gradient(#79bce8 0%, #a9d9ef 32%, #316b31 32%, #183d20 100%);
+  background: #111;
 }
 
-.course-placeholder > p {
-  margin-top: 30px;
-  margin-bottom: 0;
-  font-size: 12px;
-  letter-spacing: 4px;
-  opacity: 0.7;
-}
-
-.course-placeholder h2 {
-  margin-top: 5px;
-}
-
-.fairway {
-  position: absolute;
-  width: 240px;
-  height: 480px;
-  left: 50%;
-  bottom: -80px;
-  transform: translateX(-50%);
-  background: #4e8d43;
-  border-radius: 50% 50% 15% 15%;
-}
-
-.flag {
-  position: absolute;
-  z-index: 2;
-  top: 175px;
-  left: 50%;
-  font-size: 40px;
-  transform: translateX(-50%);
-}
-
-.tee {
-  position: absolute;
-  z-index: 2;
-  bottom: 35px;
-  left: 50%;
-  font-size: 25px;
-  transform: translateX(-50%);
+.course-3d canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .shot-panel {
   padding: 28px;
-  background: #101713;
+  overflow-y: auto;
+  background: #0a130e;
+  border-left: 1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.06
+    );
 }
 
 .shot-panel h2 {
-  margin-top: 0;
-  margin-bottom: 30px;
-  font-size: 14px;
+  margin: 0 0 22px;
+  color: #96a79e;
+  font-size: 13px;
   letter-spacing: 2px;
-  color: #92a398;
 }
 
 .stat {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  padding: 17px 0;
-  border-bottom: 1px solid #28312b;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.09
+    );
 }
 
 .stat span {
-  color: #aab4ae;
+  color: #aab5ae;
 }
 
 .stat strong {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  color: white;
   font-size: 21px;
+  white-space: nowrap;
 }
 
 .stat small {
-  font-size: 11px;
-  color: #8e9b93;
+  color: #8d9a92;
+  font-size: 10px;
 }
 
 button {
   width: 100%;
-  margin-top: 30px;
-  padding: 16px;
-  border: none;
+  margin-top: 26px;
+  padding: 15px;
+  border: 0;
   border-radius: 8px;
-  font-weight: 700;
+  background: #f0f2f1;
+  color: #101612;
+  font-weight: 750;
   cursor: pointer;
-  background: #e5e7e6;
-  color: #142018;
+  transition:
+    transform 120ms ease,
+    background 120ms ease;
 }
-.course-3d {
-  width: 100%;
-  height: 100%;
-  min-height: 650px;
+
+button:hover {
+  background: white;
+}
+
+button:active {
+  transform:
+    translateY(1px);
+}
+
+@media (
+  max-width: 900px
+) {
+  .simulator {
+    height: auto;
+    grid-template-columns:
+      1fr;
+  }
+
+  .course-3d {
+    height: 620px;
+  }
+
+  .shot-panel {
+    border-left: 0;
+    border-top: 1px solid
+      rgba(
+        255,
+        255,
+        255,
+        0.06
+      );
+  }
+
+  .hole-info {
+    gap: 22px;
+    flex-wrap: wrap;
+  }
 }

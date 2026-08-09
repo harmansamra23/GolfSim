@@ -1,127 +1,314 @@
-import GolfScene from './components/simulator/GolfScene'
-import { useState } from 'react'
+import {
+  useState,
+} from 'react'
+
 import './App.css'
 
-type ShotData = {
-  id: number
-  ballSpeed: number
-  clubSpeed: number
-  launchAngle: number
-  launchDirection: number
-  spinRate: number
-  spinAxis: number
-  carry: number
-}
+import GolfScene from './components/simulator/GolfScene'
+
+import type {
+  ShotData,
+  ShotResult,
+} from './types/shot'
 
 function App() {
-  const [shot, setShot] = useState<ShotData | null>(null)
+  const [
+    shot,
+    setShot,
+  ] =
+    useState<ShotData | null>(
+      null
+    )
 
   function testShot() {
-  const newShot: ShotData = {
-    id: Date.now(),
+    const newShot: ShotData =
+      {
+        id: Date.now(),
 
-    ballSpeed:
-      Math.round((135 + Math.random() * 25) * 10) / 10,
+        ballSpeed:
+          Math.round(
+            (
+              135 +
+              Math.random() *
+                28
+            ) *
+              10
+          ) / 10,
 
-    clubSpeed:
-      Math.round((92 + Math.random() * 18) * 10) / 10,
+        clubSpeed:
+          Math.round(
+            (
+              92 +
+              Math.random() *
+                19
+            ) *
+              10
+          ) / 10,
 
-    launchAngle:
-      Math.round((9 + Math.random() * 10) * 10) / 10,
+        launchAngle:
+          Math.round(
+            (
+              8 +
+              Math.random() *
+                11
+            ) *
+              10
+          ) / 10,
 
-    launchDirection:
-      Math.round((-7 + Math.random() * 14) * 10) / 10,
+        launchDirection:
+          Math.round(
+            (
+              -8 +
+              Math.random() *
+                16
+            ) *
+              10
+          ) / 10,
 
-    spinRate:
-      Math.round(1900 + Math.random() * 2200),
+        spinRate:
+          Math.round(
+            1800 +
+              Math.random() *
+                2200
+          ),
 
-    spinAxis:
-      Math.round((-15 + Math.random() * 30) * 10) / 10,
+        spinAxis:
+          Math.round(
+            (
+              -16 +
+              Math.random() *
+                32
+            ) *
+              10
+          ) / 10,
 
-    carry:
-      Math.round(215 + Math.random() * 65),
+        carry: null,
+
+        totalDistance: null,
+
+        lie: 'TEE',
+      }
+
+    setShot(newShot)
   }
 
-  setShot(newShot)
-}
+  function handleShotResult(
+    result: ShotResult
+  ) {
+    setShot(
+      (current) => {
+        if (
+          !current ||
+          current.id !==
+            result.id
+        ) {
+          return current
+        }
+
+        return {
+          ...current,
+          ...result,
+        }
+      }
+    )
+  }
 
   return (
     <main className="app">
       <header>
         <div>
-          <h1>GolfSim</h1>
-          <p>Plumas Lake Golf & Country Club</p>
+          <h1>
+            GolfSim
+          </h1>
+
+          <p>
+            Plumas Lake Golf
+            & Country Club
+          </p>
         </div>
 
         <div className="connection">
-          <span className="status-dot"></span>
-          R10 Simulator
+          <span className="status-dot" />
+
+          TEST MODE
         </div>
       </header>
 
       <section className="hole-info">
         <div>
-          <span>HOLE</span>
-          <strong>1</strong>
+          <span>
+            HOLE
+          </span>
+
+          <strong>
+            1
+          </strong>
         </div>
 
         <div>
-          <span>PAR</span>
-          <strong>4</strong>
+          <span>
+            PAR
+          </span>
+
+          <strong>
+            4
+          </strong>
         </div>
 
         <div>
-          <span>BLUE TEES</span>
-          <strong>409 YDS</strong>
+          <span>
+            BLUE TEES
+          </span>
+
+          <strong>
+            409 YDS
+          </strong>
+        </div>
+
+        <div>
+          <span>
+            CURRENT LIE
+          </span>
+
+          <strong>
+            {shot?.lie ??
+              'TEE'}
+          </strong>
         </div>
       </section>
 
       <section className="simulator">
         <div className="course-3d">
-      
-      <GolfScene shot={shot} />
-      </div>
+          <GolfScene
+            shot={shot}
+            onShotResult={
+              handleShotResult
+            }
+          />
+        </div>
 
         <aside className="shot-panel">
-          <h2>SHOT DATA</h2>
+          <h2>
+            SHOT DATA
+          </h2>
 
           <Stat
             label="Ball Speed"
-            value={shot ? shot.ballSpeed.toFixed(1) : '--'}
+            value={
+              shot
+                ? shot
+                    .ballSpeed
+                    .toFixed(
+                      1
+                    )
+                : '--'
+            }
             unit="mph"
           />
 
           <Stat
             label="Club Speed"
-            value={shot ? shot.clubSpeed.toFixed(1) : '--'}
+            value={
+              shot
+                ? shot
+                    .clubSpeed
+                    .toFixed(
+                      1
+                    )
+                : '--'
+            }
             unit="mph"
           />
 
           <Stat
             label="Launch"
-            value={shot ? shot.launchAngle.toFixed(1) : '--'}
+            value={
+              shot
+                ? shot
+                    .launchAngle
+                    .toFixed(
+                      1
+                    )
+                : '--'
+            }
             unit="°"
           />
 
           <Stat
             label="Direction"
-            value={shot ? shot.launchDirection.toFixed(1) : '--'}
+            value={
+              shot
+                ? shot
+                    .launchDirection
+                    .toFixed(
+                      1
+                    )
+                : '--'
+            }
             unit="°"
           />
 
           <Stat
             label="Spin"
-            value={shot ? shot.spinRate.toString() : '--'}
+            value={
+              shot
+                ? shot
+                    .spinRate
+                    .toString()
+                : '--'
+            }
             unit="rpm"
           />
 
           <Stat
+            label="Spin Axis"
+            value={
+              shot
+                ? shot
+                    .spinAxis
+                    .toFixed(
+                      1
+                    )
+                : '--'
+            }
+            unit="°"
+          />
+
+          <Stat
             label="Carry"
-            value={shot ? shot.carry.toString() : '--'}
+            value={
+              shot?.carry !=
+              null
+                ? Math.round(
+                    shot.carry
+                  ).toString()
+                : '--'
+            }
             unit="yd"
           />
 
-          <button onClick={testShot}>TEST SHOT</button>
+          <Stat
+            label="Total"
+            value={
+              shot
+                ?.totalDistance !=
+              null
+                ? Math.round(
+                    shot
+                      .totalDistance
+                  ).toString()
+                : '--'
+            }
+            unit="yd"
+          />
+
+          <button
+            onClick={
+              testShot
+            }
+          >
+            TEST SHOT
+          </button>
         </aside>
       </section>
     </main>
@@ -134,15 +321,23 @@ function Stat({
   unit,
 }: {
   label: string
+
   value: string
+
   unit: string
 }) {
   return (
     <div className="stat">
-      <span>{label}</span>
+      <span>
+        {label}
+      </span>
 
       <strong>
-        {value} <small>{unit}</small>
+        {value}
+
+        <small>
+          {unit}
+        </small>
       </strong>
     </div>
   )
