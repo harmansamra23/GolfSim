@@ -1,3 +1,4 @@
+import GolfScene from './components/simulator/GolfScene'
 import { useState } from 'react'
 import './App.css'
 
@@ -56,16 +57,9 @@ function App() {
       </section>
 
       <section className="simulator">
-        <div className="course-placeholder">
-          <p>PLUMAS LAKE</p>
-          <h2>Hole 1</h2>
-
-          <div className="flag">⚑</div>
-
-          <div className="fairway"></div>
-
-          <div className="tee">●</div>
-        </div>
+        <div className="course-3d">
+      <GolfScene />
+      </div>
 
         <aside className="shot-panel">
           <h2>SHOT DATA</h2>
