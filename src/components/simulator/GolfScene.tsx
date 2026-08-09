@@ -2,6 +2,10 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Sky } from '@react-three/drei'
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import {
+  getSurfaceAtPosition,
+  getSurfacePhysics,
+} from '../../physics/surfacePhysics'
 
 type ShotData = {
   id: number
@@ -196,41 +200,51 @@ function AnimatedGolfBall({
 
       // LANDING
       if (
-        position.current.y <= 0.2 &&
-        velocity.current.y < 0
-      ) {
-        position.current.y = 0.2
+  position.current.y <= 0.2 &&
+  velocity.current.y < 0
+) {
+  position.current.y = 0.2
 
-        bounceCount.current += 1
+  const surface =
+    getSurfaceAtPosition(
+      position.current.x,
+      position.current.z
+    )
 
-        const verticalImpact =
-          Math.abs(
-            velocity.current.y
-          )
+  const surfacePhysics =
+    getSurfacePhysics(surface)
 
-        // First bounce is strongest
-        const restitution =
-          bounceCount.current === 1
-            ? 0.32
-            : 0.18
+  bounceCount.current += 1
 
-        velocity.current.y =
-          verticalImpact *
-          restitution
+  const verticalImpact =
+    Math.abs(
+      velocity.current.y
+    )
 
-        // Ground removes speed
-        velocity.current.x *= 0.78
-        velocity.current.z *= 0.78
+  const bounceMultiplier =
+    bounceCount.current === 1
+      ? surfacePhysics.bounce
+      : surfacePhysics.bounce * 0.55
 
-        // Stop bouncing and start rolling
-        if (
-          bounceCount.current >= 3 ||
-          velocity.current.y < 1.2
-        ) {
-          velocity.current.y = 0
-          rolling.current = true
-        }
-      }
+  velocity.current.y =
+    verticalImpact *
+    bounceMultiplier
+
+  velocity.current.x *=
+    surfacePhysics.horizontalRetention
+
+  velocity.current.z *=
+    surfacePhysics.horizontalRetention
+
+  if (
+    bounceCount.current >= 3 ||
+    velocity.current.y < 1.0 ||
+    surface === 'BUNKER'
+  ) {
+    velocity.current.y = 0
+    rolling.current = true
+  }
+}
     } else {
       // ROLLING
 
@@ -243,17 +257,26 @@ function AnimatedGolfBall({
         velocity.current.z * dt
 
       // Fairway rolling resistance
-      const rollingFriction =
-        Math.pow(
-          0.975,
-          dt * 60
-        )
+      const surface =
+  getSurfaceAtPosition(
+    position.current.x,
+    position.current.z
+  )
 
-      velocity.current.x *=
-        rollingFriction
+const surfacePhysics =
+  getSurfacePhysics(surface)
 
-      velocity.current.z *=
-        rollingFriction
+const rollingFriction =
+  Math.pow(
+    surfacePhysics.rollingFriction,
+    dt * 60
+  )
+
+velocity.current.x *=
+  rollingFriction
+
+velocity.current.z *=
+  rollingFriction
 
       const horizontalSpeed =
         Math.sqrt(
