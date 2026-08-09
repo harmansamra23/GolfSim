@@ -3,11 +3,13 @@ import { useState } from 'react'
 import './App.css'
 
 type ShotData = {
+  id: number
   ballSpeed: number
   clubSpeed: number
   launchAngle: number
   launchDirection: number
   spinRate: number
+  spinAxis: number
   carry: number
 }
 
@@ -15,15 +17,33 @@ function App() {
   const [shot, setShot] = useState<ShotData | null>(null)
 
   function testShot() {
-    setShot({
-      ballSpeed: 148.7,
-      clubSpeed: 101.2,
-      launchAngle: 13.4,
-      launchDirection: 2.1,
-      spinRate: 2380,
-      carry: 251,
-    })
+  const newShot: ShotData = {
+    id: Date.now(),
+
+    ballSpeed:
+      Math.round((135 + Math.random() * 25) * 10) / 10,
+
+    clubSpeed:
+      Math.round((92 + Math.random() * 18) * 10) / 10,
+
+    launchAngle:
+      Math.round((9 + Math.random() * 10) * 10) / 10,
+
+    launchDirection:
+      Math.round((-7 + Math.random() * 14) * 10) / 10,
+
+    spinRate:
+      Math.round(1900 + Math.random() * 2200),
+
+    spinAxis:
+      Math.round((-15 + Math.random() * 30) * 10) / 10,
+
+    carry:
+      Math.round(215 + Math.random() * 65),
   }
+
+  setShot(newShot)
+}
 
   return (
     <main className="app">
@@ -58,7 +78,8 @@ function App() {
 
       <section className="simulator">
         <div className="course-3d">
-      <GolfScene />
+      
+      <GolfScene shot={shot} />
       </div>
 
         <aside className="shot-panel">
