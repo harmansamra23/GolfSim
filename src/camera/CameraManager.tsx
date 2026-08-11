@@ -1,8 +1,7 @@
 import { OrbitControls } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useRef } from 'react'
+import { useRef, type ComponentRef } from 'react'
 import * as THREE from 'three'
-import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 
 import type { BallStateReader } from '../ball/BallState'
 import {
@@ -22,7 +21,7 @@ export function CameraManager({
   preference,
 }: CameraManagerProps) {
   const { camera } = useThree()
-  const controlsRef = useRef<OrbitControlsImpl>(null)
+  const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
   const desiredPosition = useRef(new THREE.Vector3())
   const desiredTarget = useRef(new THREE.Vector3())
 
