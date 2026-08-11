@@ -1,33 +1,56 @@
+import { useMemo } from 'react'
+import * as THREE from 'three'
+
 import { courseMaterials } from '../components/simulator/CourseMaterials'
 import { plumasLakeHole1 } from '../courses/plumasLakeHole1'
 
+function createBunkerGeometry() {
+  const geometry = new THREE.CircleGeometry(1, 64)
+  const positions = geometry.attributes.position
+
+  positions.setZ(0, -0.075)
+  positions.needsUpdate = true
+  geometry.computeVertexNormals()
+
+  return geometry
+}
+
 export function Bunkers() {
+  const bowlGeometry = useMemo(() => createBunkerGeometry(), [])
+
   return (
     <>
       {plumasLakeHole1.bunkers.map((bunker, index) => (
-        <mesh
+        <group
           key={index}
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[
-            bunker.center.x,
-            0.08,
-            bunker.center.z,
-          ]}
-          scale={[
-            bunker.radiusX,
-            bunker.radiusZ,
-            1,
-          ]}
-          receiveShadow
+          position={[bunker.center.x, 0.095, bunker.center.z]}
         >
-          <circleGeometry args={[1, 64]} />
-          <meshStandardMaterial
-            map={courseMaterials.sand.map}
-            normalMap={courseMaterials.sand.normalMap}
-            roughnessMap={courseMaterials.sand.roughnessMap}
-            roughness={1}
-          />
-        </mesh>
+          <mesh
+            rotation={[-Math.PI / 2, 0, 0]}
+            scale={[bunker.radiusX, bunker.radiusZ, 1]}
+            geometry={bowlGeometry}
+            receiveShadow
+          >
+            <meshStandardMaterial
+              map={courseMaterials.sand.map}
+              normalMap={courseMaterials.sand.normalMap}
+              roughnessMap={courseMaterials.sand.roughnessMap}
+              roughness={1}
+            />
+          </mesh>
+
+          <mesh
+            rotation={[Math.PI / 2, 0, 0]}
+            scale={[bunker.radiusX, bunker.radiusZ, 1]}
+            receiveShadow
+          >
+            <torusGeometry args={[1, 0.035, 8, 64]} />
+            <meshStandardMaterial
+              color="#cdb77c"
+              roughness={1}
+            />
+          </mesh>
+        </group>
       ))}
     </>
   )

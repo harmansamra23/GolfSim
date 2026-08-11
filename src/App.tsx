@@ -1,220 +1,244 @@
-import {
-  useState,
-} from 'react'
+import { useMemo, useState } from 'react'
 
 import './App.css'
 
+import type { BallPhase } from './ball/BallState'
+import type { CameraPreference } from './camera/CameraManager'
 import GolfScene from './components/simulator/GolfScene'
-
+import { plumasLakeHole1 } from './courses/plumasLakeHole1'
+import type { SurfaceType } from './courses/courseTypes'
+import { recommendClub } from './gameplay/ClubManager'
+import {
+  scoreLabel,
+  scoreToPar,
+  type HoleScore,
+} from './gameplay/ScoreManager'
+import { toSimulatorShot } from './launchMonitor/LaunchMonitorAdapter'
+import {
+  createMockFullShot,
+  createMockPutt,
+} from './launchMonitor/MockLaunchMonitor'
+import { metersToYards } from './simulator/units'
 import type {
   ShotData,
+  ShotPosition,
   ShotResult,
 } from './types/shot'
+import { Scorecard } from './ui/Scorecard'
+
+const HOLE_PAR = plumasLakeHole1.par
+const HOLE_NUMBER = plumasLakeHole1.number
+
+const INITIAL_POSITION: ShotPosition = {
+  x: plumasLakeHole1.tee.x,
+  y: 0.2,
+  z: plumasLakeHole1.tee.z,
+}
+
+const INITIAL_REMAINING_YARDS = metersToYards(
+  Math.hypot(
+    plumasLakeHole1.green.center.x - plumasLakeHole1.tee.x,
+    plumasLakeHole1.green.center.z - plumasLakeHole1.tee.z
+  )
+)
 
 function App() {
-  const [
-    shot,
-    setShot,
-  ] =
-    useState<ShotData | null>(
-      null
-    )
+  const [shot, setShot] = useState<ShotData | null>(null)
+  const [currentLie, setCurrentLie] = useState<SurfaceType>('TEE')
+  const [ballPosition, setBallPosition] = useState<ShotPosition>(
+    INITIAL_POSITION
+  )
+  const [remainingYards, setRemainingYards] = useState(
+    INITIAL_REMAINING_YARDS
+  )
+  const [strokes, setStrokes] = useState(0)
+  const [penalties, setPenalties] = useState(0)
+  const [holeComplete, setHoleComplete] = useState(false)
+  const [completedScore, setCompletedScore] = useState<HoleScore | null>(null)
+  const [cameraPreference, setCameraPreference] =
+    useState<CameraPreference>('AUTO')
+  const [ballPhase, setBallPhase] = useState<BallPhase>('ADDRESS')
+  const [resetToken, setResetToken] = useState(0)
 
-  function testShot() {
-    const newShot: ShotData =
-      {
-        id: Date.now(),
+  const shotInProgress =
+    ballPhase === 'FLIGHT' ||
+    ballPhase === 'LANDING' ||
+    ballPhase === 'ROLLING'
 
-        ballSpeed:
-          Math.round(
-            (
-              135 +
-              Math.random() *
-                28
-            ) *
-              10
-          ) / 10,
+  const recommendedClub = useMemo(
+    () => recommendClub(remainingYards, currentLie),
+    [remainingYards, currentLie]
+  )
 
-        clubSpeed:
-          Math.round(
-            (
-              92 +
-              Math.random() *
-                19
-            ) *
-              10
-          ) / 10,
+  function getAimDirectionDeg() {
+    const dx = plumasLakeHole1.green.center.x - ballPosition.x
+    const dz = plumasLakeHole1.green.center.z - ballPosition.z
 
-        launchAngle:
-          Math.round(
-            (
-              8 +
-              Math.random() *
-                11
-            ) *
-              10
-          ) / 10,
-
-        launchDirection:
-          Math.round(
-            (
-              -8 +
-              Math.random() *
-                16
-            ) *
-              10
-          ) / 10,
-
-        spinRate:
-          Math.round(
-            1800 +
-              Math.random() *
-                2200
-          ),
-
-        spinAxis:
-          Math.round(
-            (
-              -16 +
-              Math.random() *
-                32
-            ) *
-              10
-          ) / 10,
-
-        carry: null,
-
-        totalDistance: null,
-
-        lie: 'TEE',
-      }
-
-    setShot(newShot)
+    return (Math.atan2(dx, -dz) * 180) / Math.PI
   }
 
-  function handleShotResult(
-    result: ShotResult
-  ) {
-    setShot(
-      (current) => {
-        if (
-          !current ||
-          current.id !==
-            result.id
-        ) {
-          return current
-        }
+  function takeTestShot() {
+    if (holeComplete || shotInProgress) return
 
-        return {
-          ...current,
-          ...result,
-        }
-      }
-    )
+    const aimDirectionDeg = getAimDirectionDeg()
+
+    const monitorShot =
+      currentLie === 'GREEN'
+        ? createMockPutt(remainingYards, aimDirectionDeg)
+        : createMockFullShot(remainingYards, aimDirectionDeg)
+
+    setShot(toSimulatorShot(monitorShot))
+    setStrokes((value) => value + 1)
   }
+
+  function addPenalty() {
+    if (holeComplete || shotInProgress) return
+    setPenalties((value) => value + 1)
+  }
+
+  function updateRemaining(position: ShotPosition) {
+    const meters = Math.hypot(
+      plumasLakeHole1.green.center.x - position.x,
+      plumasLakeHole1.green.center.z - position.z
+    )
+
+    setRemainingYards(metersToYards(meters))
+  }
+
+  function handleShotResult(result: ShotResult) {
+    setShot((current) => {
+      if (!current || current.id !== result.id) {
+        return current
+      }
+
+      return {
+        ...current,
+        ...result,
+      }
+    })
+
+    if (result.lie) {
+      setCurrentLie(result.lie)
+    }
+
+    if (result.finalPosition) {
+      setBallPosition(result.finalPosition)
+      updateRemaining(result.finalPosition)
+    }
+
+    if (result.holed) {
+      setHoleComplete(true)
+      setRemainingYards(0)
+      setCompletedScore({
+        hole: HOLE_NUMBER,
+        par: HOLE_PAR,
+        strokes,
+        penalties,
+      })
+    }
+  }
+
+  function resetHole() {
+    setShot(null)
+    setCurrentLie('TEE')
+    setBallPosition(INITIAL_POSITION)
+    setRemainingYards(INITIAL_REMAINING_YARDS)
+    setStrokes(0)
+    setPenalties(0)
+    setHoleComplete(false)
+    setCompletedScore(null)
+    setCameraPreference('AUTO')
+    setBallPhase('ADDRESS')
+    setResetToken((value) => value + 1)
+  }
+
+  const liveScore: HoleScore = {
+    hole: HOLE_NUMBER,
+    par: HOLE_PAR,
+    strokes,
+    penalties,
+  }
+
+  const displayedScore = completedScore ?? liveScore
+  const relativeToPar = scoreToPar(displayedScore)
 
   return (
     <main className="app">
       <header>
         <div>
-          <h1>
-            GolfSim
-          </h1>
-
-          <p>
-            Plumas Lake Golf
-            & Country Club
-          </p>
+          <h1>GolfSim</h1>
+          <p>Plumas Lake Golf & Country Club</p>
         </div>
 
         <div className="connection">
           <span className="status-dot" />
-
-          TEST MODE
+          {shotInProgress ? 'SHOT ACTIVE' : 'MOCK MONITOR READY'}
         </div>
       </header>
 
       <section className="hole-info">
         <div>
-          <span>
-            HOLE
-          </span>
-
-          <strong>
-            1
-          </strong>
+          <span>HOLE</span>
+          <strong>{HOLE_NUMBER}</strong>
         </div>
 
         <div>
-          <span>
-            PAR
-          </span>
-
-          <strong>
-            4
-          </strong>
+          <span>PAR</span>
+          <strong>{HOLE_PAR}</strong>
         </div>
 
         <div>
-          <span>
-            BLUE TEES
-          </span>
-
-          <strong>
-            409 YDS
-          </strong>
+          <span>REMAINING</span>
+          <strong>{Math.round(remainingYards)} YDS</strong>
         </div>
 
         <div>
-          <span>
-            CURRENT LIE
-          </span>
+          <span>CURRENT LIE</span>
+          <strong>{currentLie}</strong>
+        </div>
 
-          <strong>
-            {shot?.lie ??
-              'TEE'}
-          </strong>
+        <div>
+          <span>CLUB</span>
+          <strong>{recommendedClub}</strong>
+        </div>
+
+        <div>
+          <span>STROKES</span>
+          <strong>{strokes + penalties}</strong>
         </div>
       </section>
+
+      <Scorecard score={displayedScore} complete={holeComplete} />
 
       <section className="simulator">
         <div className="course-3d">
           <GolfScene
             shot={shot}
-            onShotResult={
-              handleShotResult
-            }
+            cameraPreference={cameraPreference}
+            resetToken={resetToken}
+            onBallPhaseChange={setBallPhase}
+            onShotResult={handleShotResult}
           />
         </div>
 
         <aside className="shot-panel">
           <h2>
-            SHOT DATA
+            {holeComplete
+              ? `${scoreLabel(relativeToPar)} · ${strokes + penalties}`
+              : 'SHOT DATA'}
           </h2>
 
           <Stat
             label="Ball Speed"
-            value={
-              shot
-                ? shot
-                    .ballSpeed
-                    .toFixed(
-                      1
-                    )
-                : '--'
-            }
+            value={shot ? shot.ballSpeed.toFixed(1) : '--'}
             unit="mph"
           />
 
           <Stat
             label="Club Speed"
             value={
-              shot
-                ? shot
-                    .clubSpeed
-                    .toFixed(
-                      1
-                    )
+              shot?.clubSpeed != null
+                ? shot.clubSpeed.toFixed(1)
                 : '--'
             }
             unit="mph"
@@ -222,66 +246,27 @@ function App() {
 
           <Stat
             label="Launch"
-            value={
-              shot
-                ? shot
-                    .launchAngle
-                    .toFixed(
-                      1
-                    )
-                : '--'
-            }
+            value={shot ? shot.launchAngle.toFixed(1) : '--'}
             unit="°"
           />
 
           <Stat
             label="Direction"
-            value={
-              shot
-                ? shot
-                    .launchDirection
-                    .toFixed(
-                      1
-                    )
-                : '--'
-            }
+            value={shot ? shot.launchDirection.toFixed(1) : '--'}
             unit="°"
           />
 
           <Stat
             label="Spin"
-            value={
-              shot
-                ? shot
-                    .spinRate
-                    .toString()
-                : '--'
-            }
+            value={shot ? shot.spinRate.toString() : '--'}
             unit="rpm"
-          />
-
-          <Stat
-            label="Spin Axis"
-            value={
-              shot
-                ? shot
-                    .spinAxis
-                    .toFixed(
-                      1
-                    )
-                : '--'
-            }
-            unit="°"
           />
 
           <Stat
             label="Carry"
             value={
-              shot?.carry !=
-              null
-                ? Math.round(
-                    shot.carry
-                  ).toString()
+              shot?.carry != null
+                ? Math.round(shot.carry).toString()
                 : '--'
             }
             unit="yd"
@@ -290,25 +275,66 @@ function App() {
           <Stat
             label="Total"
             value={
-              shot
-                ?.totalDistance !=
-              null
-                ? Math.round(
-                    shot
-                      .totalDistance
-                  ).toString()
+              shot?.totalDistance != null
+                ? Math.round(shot.totalDistance).toString()
                 : '--'
             }
             unit="yd"
           />
 
-          <button
-            onClick={
-              testShot
+          <Stat
+            label="Final Score"
+            value={
+              holeComplete
+                ? relativeToPar > 0
+                  ? `+${relativeToPar}`
+                  : relativeToPar.toString()
+                : '--'
             }
+            unit=""
+          />
+
+          <button
+            onClick={takeTestShot}
+            disabled={holeComplete || shotInProgress}
           >
-            TEST SHOT
+            {currentLie === 'GREEN' ? 'TEST PUTT' : 'TEST SHOT'}
           </button>
+
+          <button
+            className="secondary-action"
+            onClick={() =>
+              setCameraPreference((current) =>
+                current === 'AUTO' ? 'FREE' : 'AUTO'
+              )
+            }
+            disabled={shotInProgress}
+          >
+            CAMERA: {cameraPreference}
+          </button>
+
+          <button
+            className="secondary-action"
+            onClick={addPenalty}
+            disabled={holeComplete || shotInProgress}
+          >
+            + PENALTY
+          </button>
+
+          <button
+            className="secondary-action"
+            onClick={resetHole}
+            disabled={shotInProgress}
+          >
+            RESET HOLE
+          </button>
+
+          <div className="round-summary">
+            <span>{ballPhase}</span>
+            <strong>
+              X {ballPosition.x.toFixed(1)} / Z {ballPosition.z.toFixed(1)}
+            </strong>
+          </div>
         </aside>
       </section>
     </main>
@@ -321,23 +347,15 @@ function Stat({
   unit,
 }: {
   label: string
-
   value: string
-
   unit: string
 }) {
   return (
     <div className="stat">
-      <span>
-        {label}
-      </span>
-
+      <span>{label}</span>
       <strong>
         {value}
-
-        <small>
-          {unit}
-        </small>
+        {unit ? <small>{unit}</small> : null}
       </strong>
     </div>
   )

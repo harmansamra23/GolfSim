@@ -42,21 +42,9 @@ header p {
   display: flex;
   align-items: center;
   padding: 10px 15px;
-  border: 1px solid
-    rgba(
-      255,
-      255,
-      255,
-      0.1
-    );
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 30px;
-  background:
-    rgba(
-      255,
-      255,
-      255,
-      0.05
-    );
+  background: rgba(255, 255, 255, 0.05);
   font-size: 13px;
   letter-spacing: 1px;
 }
@@ -66,7 +54,8 @@ header p {
   height: 9px;
   margin-right: 8px;
   border-radius: 50%;
-  background: #e4b849;
+  background: #65d98b;
+  box-shadow: 0 0 12px rgba(101, 217, 139, 0.45);
 }
 
 .hole-info {
@@ -74,17 +63,10 @@ header p {
   margin: auto;
   display: flex;
   align-items: center;
-  gap: 48px;
+  gap: 34px;
   padding: 15px 22px;
-  background:
-    rgba(
-      4,
-      18,
-      11,
-      0.94
-    );
-  border-radius:
-    14px 14px 0 0;
+  background: rgba(4, 18, 11, 0.94);
+  border-radius: 14px 14px 0 0;
 }
 
 .hole-info div {
@@ -93,7 +75,8 @@ header p {
   min-width: 70px;
 }
 
-.hole-info span {
+.hole-info span,
+.scorecard span {
   margin-bottom: 4px;
   color: #8fa299;
   font-size: 10px;
@@ -101,24 +84,40 @@ header p {
 }
 
 .hole-info strong {
-  font-size: 20px;
+  font-size: 18px;
+}
+
+.scorecard {
+  max-width: 1600px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(90px, 1fr));
+  gap: 1px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.scorecard div {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 16px;
+  background: #08150e;
+}
+
+.scorecard strong {
+  font-size: 14px;
 }
 
 .simulator {
   max-width: 1600px;
-  height: min(
-    78vh,
-    820px
-  );
+  height: min(78vh, 820px);
   min-height: 640px;
   margin: auto;
   display: grid;
-  grid-template-columns:
-    minmax(0, 1fr)
-    330px;
+  grid-template-columns: minmax(0, 1fr) 330px;
   overflow: hidden;
-  border-radius:
-    0 0 14px 14px;
+  border-radius: 0 0 14px 14px;
   background: #07110c;
 }
 
@@ -141,19 +140,13 @@ header p {
   padding: 28px;
   overflow-y: auto;
   background: #0a130e;
-  border-left: 1px solid
-    rgba(
-      255,
-      255,
-      255,
-      0.06
-    );
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .shot-panel h2 {
   margin: 0 0 22px;
-  color: #96a79e;
-  font-size: 13px;
+  color: #b9c7bf;
+  font-size: 14px;
   letter-spacing: 2px;
 }
 
@@ -162,14 +155,8 @@ header p {
   justify-content: space-between;
   align-items: baseline;
   gap: 12px;
-  padding: 16px 0;
-  border-bottom: 1px solid
-    rgba(
-      255,
-      255,
-      255,
-      0.09
-    );
+  padding: 13px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
 }
 
 .stat span {
@@ -181,7 +168,7 @@ header p {
   align-items: baseline;
   gap: 5px;
   color: white;
-  font-size: 21px;
+  font-size: 20px;
   white-space: nowrap;
 }
 
@@ -192,8 +179,8 @@ header p {
 
 button {
   width: 100%;
-  margin-top: 26px;
-  padding: 15px;
+  margin-top: 20px;
+  padding: 14px;
   border: 0;
   border-radius: 8px;
   background: #f0f2f1;
@@ -202,25 +189,54 @@ button {
   cursor: pointer;
   transition:
     transform 120ms ease,
-    background 120ms ease;
+    background 120ms ease,
+    opacity 120ms ease;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   background: white;
 }
 
-button:active {
-  transform:
-    translateY(1px);
+button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
-@media (
-  max-width: 900px
-) {
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.secondary-action {
+  margin-top: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #dbe5df;
+}
+
+.secondary-action:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.round-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #7f9187;
+  font-size: 11px;
+}
+
+.round-summary strong {
+  color: #aebdb5;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
   .simulator {
     height: auto;
-    grid-template-columns:
-      1fr;
+    grid-template-columns: 1fr;
   }
 
   .course-3d {
@@ -229,17 +245,16 @@ button:active {
 
   .shot-panel {
     border-left: 0;
-    border-top: 1px solid
-      rgba(
-        255,
-        255,
-        255,
-        0.06
-      );
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .hole-info {
     gap: 22px;
     flex-wrap: wrap;
+  }
+
+  .scorecard {
+    grid-template-columns: repeat(5, minmax(70px, 1fr));
+    overflow-x: auto;
   }
 }
