@@ -1,49 +1,46 @@
-const leftTrees = [
-  [-24, -25, 1.1, 0.1],
-  [-28, -50, 1.25, -0.35],
-  [-31, -78, 1.0, 0.45],
-  [-33, -108, 1.3, -0.1],
-  [-34, -140, 1.1, 0.7],
-  [-33, -172, 1.25, -0.55],
-  [-31, -205, 1.05, 0.25],
-  [-30, -238, 1.2, -0.8],
-  [-29, -270, 1.15, 0.55],
-  [-27, -300, 1.25, -0.2],
-  [-26, -330, 1.05, 0.85],
-] as const
+import type { GolfHole } from '../courses/courseTypes'
+import {
+  fairwayCenterX,
+  fairwayHalfWidth,
+} from '../courses/holeGeometryMath'
 
-const rightTrees = [
-  [25, -28, 1.15, -0.2],
-  [29, -55, 1.0, 0.6],
-  [32, -82, 1.3, -0.45],
-  [34, -112, 1.1, 0.3],
-  [35, -145, 1.25, -0.7],
-  [34, -178, 1.05, 0.15],
-  [33, -210, 1.2, 0.8],
-  [32, -243, 1.1, -0.25],
-  [30, -276, 1.25, 0.5],
-  [28, -307, 1.0, -0.6],
-  [27, -335, 1.15, 0.2],
-] as const
+export function Vegetation({ hole }: { hole: GolfHole }) {
+  const treeRows = Array.from({ length: 11 }, (_, index) => {
+    const t = (index + 1) / 12
+    const z =
+      hole.fairway.startZ +
+      (hole.fairway.endZ - hole.fairway.startZ) * t
+    const center = fairwayCenterX(hole, z)
+    const width = fairwayHalfWidth(hole, z)
 
-export function Vegetation() {
+    return {
+      z,
+      leftX: center - width - 13 - (index % 3) * 2,
+      rightX: center + width + 13 + ((index + 1) % 3) * 2,
+      leftScale: 1 + (index % 4) * 0.08,
+      rightScale: 1.05 + ((index + 2) % 4) * 0.07,
+      leftRotation: -0.65 + (index % 5) * 0.28,
+      rightRotation: 0.6 - (index % 5) * 0.25,
+    }
+  })
+
   return (
     <>
-      {leftTrees.map(([x, z, scale, rotation], index) => (
+      {treeRows.map((tree, index) => (
         <Tree
           key={`left-${index}`}
-          position={[x, 0, z]}
-          scale={scale}
-          rotation={rotation}
+          position={[tree.leftX, 0, tree.z]}
+          scale={tree.leftScale}
+          rotation={tree.leftRotation}
         />
       ))}
 
-      {rightTrees.map(([x, z, scale, rotation], index) => (
+      {treeRows.map((tree, index) => (
         <Tree
           key={`right-${index}`}
-          position={[x, 0, z]}
-          scale={scale}
-          rotation={rotation}
+          position={[tree.rightX, 0, tree.z]}
+          scale={tree.rightScale}
+          rotation={tree.rightRotation}
         />
       ))}
     </>
@@ -67,10 +64,7 @@ function Tree({
     >
       <mesh position={[0, 2.8, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.28, 0.48, 5.6, 9]} />
-        <meshStandardMaterial
-          color="#4b3524"
-          roughness={0.96}
-        />
+        <meshStandardMaterial color="#4b3524" roughness={0.96} />
       </mesh>
 
       <mesh
@@ -127,10 +121,7 @@ function Canopy({
   return (
     <mesh position={position} scale={scale} castShadow receiveShadow>
       <icosahedronGeometry args={[2.2, 2]} />
-      <meshStandardMaterial
-        color={color}
-        roughness={0.94}
-      />
+      <meshStandardMaterial color={color} roughness={0.94} />
     </mesh>
   )
 }
