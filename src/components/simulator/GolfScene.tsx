@@ -172,7 +172,13 @@ function AnimatedGolfBall({
       plumasLakeHole1.tee.z
     )
   )
-  const startPosition = useRef(position.current.clone())
+  const startPosition = useRef(
+    new THREE.Vector3(
+      plumasLakeHole1.tee.x,
+      0.2,
+      plumasLakeHole1.tee.z
+    )
+  )
   const velocity = useRef(new THREE.Vector3())
   const currentShot = useRef<ShotData | null>(null)
   const lastShotId = useRef<number | null>(null)
