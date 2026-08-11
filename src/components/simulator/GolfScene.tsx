@@ -36,6 +36,8 @@ import type { ShotData, ShotResult } from '../../types/shot'
 type GolfSceneProps = {
   shot: ShotData | null
   cameraPreference: CameraPreference
+  resetToken: number
+  onBallPhaseChange: (phase: BallPhase) => void
   onShotResult: (result: ShotResult) => void
 }
 
@@ -54,6 +56,8 @@ const tracerGlowMaterial = new THREE.MeshBasicMaterial({
 function GolfScene({
   shot,
   cameraPreference,
+  resetToken,
+  onBallPhaseChange,
   onShotResult,
 }: GolfSceneProps) {
   const ballState = useRef<BallState>({
@@ -131,7 +135,9 @@ function GolfScene({
 
       <AnimatedGolfBall
         shot={shot}
+        resetToken={resetToken}
         setBallState={setBallState}
+        onBallPhaseChange={onBallPhaseChange}
         onShotResult={onShotResult}
       />
 
@@ -145,11 +151,15 @@ function GolfScene({
 
 function AnimatedGolfBall({
   shot,
+  resetToken,
   setBallState,
+  onBallPhaseChange,
   onShotResult,
 }: {
   shot: ShotData | null
+  resetToken: number
   setBallState: BallStateWriter
+  onBallPhaseChange: (phase: BallPhase) => void
   onShotResult: (result: ShotResult) => void
 }) {
   const ballRef = useRef<THREE.Mesh>(null)
@@ -166,14 +176,25 @@ function AnimatedGolfBall({
   const velocity = useRef(new THREE.Vector3())
   const currentShot = useRef<ShotData | null>(null)
   const lastShotId = useRef<number | null>(null)
+  const lastResetToken = useRef(resetToken)
   const active = useRef(false)
   const rolling = useRef(false)
   const bounceCount = useRef(0)
   const phase = useRef<BallPhase>('ADDRESS')
+  const lastReportedPhase = useRef<BallPhase>('ADDRESS')
   const carryReported = useRef(false)
   const carryYards = useRef(0)
   const tracerPoints = useRef<THREE.Vector3[]>([])
   const flightAccumulator = useRef(0)
+
+  function setPhase(nextPhase: BallPhase) {
+    phase.current = nextPhase
+
+    if (lastReportedPhase.current !== nextPhase) {
+      lastReportedPhase.current = nextPhase
+      onBallPhaseChange(nextPhase)
+    }
+  }
 
   function clearTracer() {
     if (!tracerRef.current) return
@@ -185,6 +206,39 @@ function AnimatedGolfBall({
     })
 
     tracerRef.current.clear()
+  }
+
+  function resetBall() {
+    active.current = false
+    rolling.current = false
+    bounceCount.current = 0
+    carryReported.current = false
+    carryYards.current = 0
+    currentShot.current = null
+    lastShotId.current = null
+    flightAccumulator.current = 0
+
+    position.current.set(
+      plumasLakeHole1.tee.x,
+      0.2,
+      plumasLakeHole1.tee.z
+    )
+    startPosition.current.copy(position.current)
+    velocity.current.set(0, 0, 0)
+    setPhase('ADDRESS')
+
+    clearTracer()
+    tracerPoints.current = []
+
+    if (ballRef.current) {
+      ballRef.current.position.copy(position.current)
+    }
+
+    setBallState(
+      phase.current,
+      position.current,
+      velocity.current
+    )
   }
 
   function startShot(newShot: ShotData) {
@@ -201,11 +255,11 @@ function AnimatedGolfBall({
     if (newShot.kind === 'PUTT') {
       velocity.current.copy(createPuttVelocity(newShot))
       rolling.current = true
-      phase.current = 'ROLLING'
+      setPhase('ROLLING')
     } else {
       velocity.current.copy(createLaunchVelocity(newShot))
       rolling.current = false
-      phase.current = 'FLIGHT'
+      setPhase('FLIGHT')
     }
 
     active.current = true
@@ -241,12 +295,22 @@ function AnimatedGolfBall({
   function finishShot(current: ShotData, holed: boolean) {
     velocity.current.set(0, 0, 0)
     active.current = false
-    phase.current = 'STOPPED'
+    setPhase('STOPPED')
 
     if (holed) {
       position.current.x = plumasLakeHole1.green.center.x
       position.current.z = plumasLakeHole1.green.center.z
     }
+
+    if (ballRef.current) {
+      ballRef.current.position.copy(position.current)
+    }
+
+    setBallState(
+      phase.current,
+      position.current,
+      velocity.current
+    )
 
     const totalMeters = Math.hypot(
       position.current.x - startPosition.current.x,
@@ -283,9 +347,10 @@ function AnimatedGolfBall({
 
     if (
       velocity.current.y < 0 &&
-      position.current.y < 8
+      position.current.y < 8 &&
+      phase.current !== 'LANDING'
     ) {
-      phase.current = 'LANDING'
+      setPhase('LANDING')
     }
 
     if (
@@ -314,11 +379,17 @@ function AnimatedGolfBall({
     if (impact.shouldRoll) {
       velocity.current.y = 0
       rolling.current = true
-      phase.current = 'ROLLING'
+      setPhase('ROLLING')
     }
   }
 
   useFrame((_, frameDelta) => {
+    if (resetToken !== lastResetToken.current) {
+      lastResetToken.current = resetToken
+      resetBall()
+      return
+    }
+
     if (shot && shot.id !== lastShotId.current) {
       lastShotId.current = shot.id
       startShot(shot)
