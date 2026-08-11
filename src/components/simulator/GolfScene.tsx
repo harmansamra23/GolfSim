@@ -14,7 +14,7 @@ import {
   type CameraPreference,
 } from '../../camera/CameraManager'
 import { CourseHole } from '../../course/CourseHole'
-import { plumasLakeHole1 } from '../../courses/plumasLakeHole1'
+import type { GolfHole } from '../../courses/courseTypes'
 import {
   BALL_FLIGHT_STEP_SECONDS,
   createLaunchVelocity,
@@ -34,6 +34,7 @@ import { metersToYards } from '../../simulator/units'
 import type { ShotData, ShotResult } from '../../types/shot'
 
 type GolfSceneProps = {
+  hole: GolfHole
   shot: ShotData | null
   cameraPreference: CameraPreference
   resetToken: number
@@ -54,6 +55,7 @@ const tracerGlowMaterial = new THREE.MeshBasicMaterial({
 })
 
 function GolfScene({
+  hole,
   shot,
   cameraPreference,
   resetToken,
@@ -61,11 +63,7 @@ function GolfScene({
   onShotResult,
 }: GolfSceneProps) {
   const ballState = useRef<BallState>({
-    position: new THREE.Vector3(
-      plumasLakeHole1.tee.x,
-      0.2,
-      plumasLakeHole1.tee.z
-    ),
+    position: new THREE.Vector3(hole.tee.x, 0.2, hole.tee.z),
     velocity: new THREE.Vector3(),
     phase: 'ADDRESS',
   })
@@ -87,10 +85,10 @@ function GolfScene({
       shadows
       dpr={[1, 2]}
       camera={{
-        position: [0, 1.75, 14],
+        position: [hole.tee.x, 1.75, hole.tee.z + 14],
         fov: 50,
         near: 0.1,
-        far: 1200,
+        far: 1400,
       }}
       gl={{
         antialias: true,
@@ -99,7 +97,7 @@ function GolfScene({
       }}
     >
       <color attach="background" args={['#8ebbd7']} />
-      <fog attach="fog" args={['#8ebbd7', 300, 850]} />
+      <fog attach="fog" args={['#8ebbd7', 300, 900]} />
 
       <Sky
         distance={450000}
@@ -109,13 +107,11 @@ function GolfScene({
       />
 
       <ambientLight intensity={0.16} />
-
       <hemisphereLight
         intensity={0.82}
         color="#eef8ff"
         groundColor="#244528"
       />
-
       <directionalLight
         position={[58, 86, 34]}
         intensity={3}
@@ -131,9 +127,10 @@ function GolfScene({
         shadow-bias={-0.0002}
       />
 
-      <CourseHole />
+      <CourseHole hole={hole} />
 
       <AnimatedGolfBall
+        hole={hole}
         shot={shot}
         resetToken={resetToken}
         setBallState={setBallState}
@@ -142,6 +139,7 @@ function GolfScene({
       />
 
       <CameraManager
+        hole={hole}
         getBallState={getBallState}
         preference={cameraPreference}
       />
@@ -150,12 +148,14 @@ function GolfScene({
 }
 
 function AnimatedGolfBall({
+  hole,
   shot,
   resetToken,
   setBallState,
   onBallPhaseChange,
   onShotResult,
 }: {
+  hole: GolfHole
   shot: ShotData | null
   resetToken: number
   setBallState: BallStateWriter
@@ -164,20 +164,11 @@ function AnimatedGolfBall({
 }) {
   const ballRef = useRef<THREE.Mesh>(null)
   const tracerRef = useRef<THREE.Group>(null)
-
   const position = useRef(
-    new THREE.Vector3(
-      plumasLakeHole1.tee.x,
-      0.2,
-      plumasLakeHole1.tee.z
-    )
+    new THREE.Vector3(hole.tee.x, 0.2, hole.tee.z)
   )
   const startPosition = useRef(
-    new THREE.Vector3(
-      plumasLakeHole1.tee.x,
-      0.2,
-      plumasLakeHole1.tee.z
-    )
+    new THREE.Vector3(hole.tee.x, 0.2, hole.tee.z)
   )
   const velocity = useRef(new THREE.Vector3())
   const currentShot = useRef<ShotData | null>(null)
@@ -224,11 +215,7 @@ function AnimatedGolfBall({
     lastShotId.current = null
     flightAccumulator.current = 0
 
-    position.current.set(
-      plumasLakeHole1.tee.x,
-      0.2,
-      plumasLakeHole1.tee.z
-    )
+    position.current.set(hole.tee.x, 0.2, hole.tee.z)
     startPosition.current.copy(position.current)
     velocity.current.set(0, 0, 0)
     setPhase('ADDRESS')
@@ -292,6 +279,7 @@ function AnimatedGolfBall({
       id: current.id,
       carry: carryYards.current,
       lie: getSurfaceAtPosition(
+        hole,
         position.current.x,
         position.current.z
       ),
@@ -304,8 +292,8 @@ function AnimatedGolfBall({
     setPhase('STOPPED')
 
     if (holed) {
-      position.current.x = plumasLakeHole1.green.center.x
-      position.current.z = plumasLakeHole1.green.center.z
+      position.current.x = hole.green.center.x
+      position.current.z = hole.green.center.z
     }
 
     if (ballRef.current) {
@@ -326,6 +314,7 @@ function AnimatedGolfBall({
     const finalSurface = holed
       ? 'GREEN'
       : getSurfaceAtPosition(
+          hole,
           position.current.x,
           position.current.z
         )
@@ -368,10 +357,10 @@ function AnimatedGolfBall({
 
     position.current.y = 0.2
     reportCarry(current)
-
     bounceCount.current += 1
 
     const surface = getSurfaceAtPosition(
+      hole,
       position.current.x,
       position.current.z
     )
@@ -436,8 +425,8 @@ function AnimatedGolfBall({
         if (
           isBallHoled(
             position.current,
-            plumasLakeHole1.green.center.x,
-            plumasLakeHole1.green.center.z
+            hole.green.center.x,
+            hole.green.center.z
           )
         ) {
           finishShot(current, true)
@@ -445,6 +434,7 @@ function AnimatedGolfBall({
         }
       } else {
         const surface = getSurfaceAtPosition(
+          hole,
           position.current.x,
           position.current.z
         )
@@ -500,18 +490,11 @@ function AnimatedGolfBall({
     <>
       <mesh
         ref={ballRef}
-        position={[
-          plumasLakeHole1.tee.x,
-          0.2,
-          plumasLakeHole1.tee.z,
-        ]}
+        position={[hole.tee.x, 0.2, hole.tee.z]}
         castShadow
       >
         <sphereGeometry args={[0.18, 32, 32]} />
-        <meshStandardMaterial
-          color="#ffffff"
-          roughness={0.18}
-        />
+        <meshStandardMaterial color="#ffffff" roughness={0.18} />
       </mesh>
 
       <group ref={tracerRef} />
@@ -530,17 +513,14 @@ function createTracerSegment(
     .multiplyScalar(0.5)
 
   const group = new THREE.Group()
-
   const core = new THREE.Mesh(
     new THREE.CylinderGeometry(0.035, 0.035, length, 6),
     tracerCoreMaterial
   )
-
   const glow = new THREE.Mesh(
     new THREE.CylinderGeometry(0.075, 0.075, length, 6),
     tracerGlowMaterial
   )
-
   const orientation = direction.clone().normalize()
 
   core.position.copy(midpoint)
@@ -548,13 +528,11 @@ function createTracerSegment(
     new THREE.Vector3(0, 1, 0),
     orientation
   )
-
   glow.position.copy(midpoint)
   glow.quaternion.copy(core.quaternion)
 
   group.add(core)
   group.add(glow)
-
   return group
 }
 
