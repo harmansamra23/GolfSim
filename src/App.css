@@ -11,11 +11,7 @@
   min-height: 100vh;
   padding: 18px;
   background:
-    radial-gradient(
-      circle at top,
-      #0b2819,
-      #04110b 70%
-    );
+    radial-gradient(circle at top, #0b2819, #04110b 70%);
   color: #f4f7f5;
 }
 
@@ -25,6 +21,7 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 20px;
 }
 
 header h1 {
@@ -36,6 +33,29 @@ header h1 {
 header p {
   margin: 4px 0 0;
   color: #9fb0a6;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mode-chip {
+  width: auto;
+  margin: 0;
+  padding: 9px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #aab8b0;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.mode-chip-active {
+  background: #edf3ef;
+  color: #102117;
 }
 
 .connection {
@@ -63,55 +83,93 @@ header p {
   margin: auto;
   display: flex;
   align-items: center;
-  gap: 34px;
+  gap: 30px;
   padding: 15px 22px;
   background: rgba(4, 18, 11, 0.94);
   border-radius: 14px 14px 0 0;
+  overflow-x: auto;
 }
 
 .hole-info div {
   display: flex;
   flex-direction: column;
-  min-width: 70px;
+  min-width: 76px;
 }
 
-.hole-info span,
-.scorecard span {
+.hole-info span {
   margin-bottom: 4px;
   color: #8fa299;
   font-size: 10px;
-  letter-spacing: 1.6px;
+  letter-spacing: 1.5px;
 }
 
 .hole-info strong {
-  font-size: 18px;
+  font-size: 17px;
+  white-space: nowrap;
 }
 
-.scorecard {
+.round-scorecard {
+  position: relative;
   max-width: 1600px;
   margin: auto;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(90px, 1fr));
-  gap: 1px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 10px 14px 12px;
+  overflow-x: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.scorecard div {
-  display: flex;
-  flex-direction: column;
-  padding: 10px 16px;
   background: #08150e;
 }
 
-.scorecard strong {
-  font-size: 14px;
+.scorecard-row {
+  min-width: 940px;
+  display: grid;
+  grid-template-columns: 58px repeat(18, 1fr) 52px;
+  gap: 2px;
+}
+
+.scorecard-row span {
+  min-height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  color: #b4c2ba;
+  font-size: 11px;
+}
+
+.scorecard-header-row span {
+  color: #81938a;
+  font-size: 10px;
+}
+
+.scorecard-label {
+  justify-items: start !important;
+  color: #7f9187 !important;
+  letter-spacing: 1px;
+}
+
+.scorecard-total {
+  background: rgba(255, 255, 255, 0.06);
+  color: white !important;
+  font-weight: 700;
+}
+
+.active-hole-cell {
+  background: rgba(101, 217, 139, 0.14);
+  color: #91efb1 !important;
+}
+
+.round-to-par {
+  position: sticky;
+  left: 0;
+  width: max-content;
+  margin-top: 8px;
+  color: #8da097;
+  font-size: 10px;
+  letter-spacing: 1.2px;
 }
 
 .simulator {
   max-width: 1600px;
-  height: min(78vh, 820px);
+  height: min(76vh, 820px);
   min-height: 640px;
   margin: auto;
   display: grid;
@@ -155,7 +213,7 @@ header p {
   justify-content: space-between;
   align-items: baseline;
   gap: 12px;
-  padding: 13px 0;
+  padding: 12px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.09);
 }
 
@@ -168,7 +226,7 @@ header p {
   align-items: baseline;
   gap: 5px;
   color: white;
-  font-size: 20px;
+  font-size: 19px;
   white-space: nowrap;
 }
 
@@ -179,7 +237,7 @@ header p {
 
 button {
   width: 100%;
-  margin-top: 20px;
+  margin-top: 18px;
   padding: 14px;
   border: 0;
   border-radius: 8px;
@@ -207,7 +265,7 @@ button:disabled {
 }
 
 .secondary-action {
-  margin-top: 10px;
+  margin-top: 9px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.06);
   color: #dbe5df;
@@ -215,6 +273,64 @@ button:disabled {
 
 .secondary-action:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.11);
+}
+
+.round-finish-card {
+  margin-top: 18px;
+  padding: 16px;
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(101, 217, 139, 0.18);
+  border-radius: 10px;
+  background: rgba(101, 217, 139, 0.07);
+}
+
+.round-finish-card span,
+.round-finish-card small {
+  color: #8ca197;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.round-finish-card strong {
+  font-size: 30px;
+}
+
+.range-history {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.range-history h3 {
+  margin: 0 0 10px;
+  color: #8fa299;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+}
+
+.range-history p {
+  color: #6f8077;
+  font-size: 12px;
+}
+
+.range-shot-row {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.range-shot-row span,
+.range-shot-row small {
+  color: #7d8f85;
+  font-size: 10px;
+}
+
+.range-shot-row strong {
+  font-size: 13px;
 }
 
 .round-summary {
@@ -234,6 +350,16 @@ button:disabled {
 }
 
 @media (max-width: 900px) {
+  header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
   .simulator {
     height: auto;
     grid-template-columns: 1fr;
@@ -249,12 +375,6 @@ button:disabled {
   }
 
   .hole-info {
-    gap: 22px;
-    flex-wrap: wrap;
-  }
-
-  .scorecard {
-    grid-template-columns: repeat(5, minmax(70px, 1fr));
-    overflow-x: auto;
+    gap: 20px;
   }
 }
