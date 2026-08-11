@@ -1,9 +1,9 @@
 import * as THREE from 'three'
 
-import { plumasLakeHole1 } from '../courses/plumasLakeHole1'
+import type { GolfHole } from '../courses/courseTypes'
 
-export function Flag() {
-  const green = plumasLakeHole1.green
+export function Flag({ hole }: { hole: GolfHole }) {
+  const green = hole.green
 
   return (
     <>
