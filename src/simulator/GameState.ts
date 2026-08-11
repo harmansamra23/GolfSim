@@ -1,0 +1,45 @@
+export const GAME_STATES = {
+  MAIN_MENU: 'MAIN_MENU',
+  COURSE_SELECTION: 'COURSE_SELECTION',
+  ROUND_SETUP: 'ROUND_SETUP',
+  LOADING_COURSE: 'LOADING_COURSE',
+  PRE_SHOT: 'PRE_SHOT',
+  ARMED_FOR_SHOT: 'ARMED_FOR_SHOT',
+  SHOT_DETECTED: 'SHOT_DETECTED',
+  BALL_FLIGHT: 'BALL_FLIGHT',
+  BALL_LANDING: 'BALL_LANDING',
+  BALL_ROLLING: 'BALL_ROLLING',
+  SHOT_COMPLETE: 'SHOT_COMPLETE',
+  OUT_OF_BOUNDS: 'OUT_OF_BOUNDS',
+  PENALTY: 'PENALTY',
+  ON_GREEN: 'ON_GREEN',
+  PUTTING: 'PUTTING',
+  HOLE_COMPLETE: 'HOLE_COMPLETE',
+  SCORECARD: 'SCORECARD',
+  NEXT_HOLE: 'NEXT_HOLE',
+  ROUND_COMPLETE: 'ROUND_COMPLETE',
+  REPLAY: 'REPLAY',
+} as const
+
+export type GameState =
+  (typeof GAME_STATES)[keyof typeof GAME_STATES]
+
+export const INITIAL_GAME_STATE: GameState =
+  GAME_STATES.PRE_SHOT
+
+export function isLiveShotState(
+  state: GameState
+): boolean {
+  return (
+    state === GAME_STATES.SHOT_DETECTED ||
+    state === GAME_STATES.BALL_FLIGHT ||
+    state === GAME_STATES.BALL_LANDING ||
+    state === GAME_STATES.BALL_ROLLING
+  )
+}
+
+export function canUseFreeCamera(
+  state: GameState
+): boolean {
+  return !isLiveShotState(state)
+}
