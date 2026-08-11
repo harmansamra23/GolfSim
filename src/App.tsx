@@ -70,13 +70,22 @@ function App() {
     [remainingYards, currentLie]
   )
 
+  function getAimDirectionDeg() {
+    const dx = plumasLakeHole1.green.center.x - ballPosition.x
+    const dz = plumasLakeHole1.green.center.z - ballPosition.z
+
+    return (Math.atan2(dx, -dz) * 180) / Math.PI
+  }
+
   function takeTestShot() {
     if (holeComplete || shotInProgress) return
 
+    const aimDirectionDeg = getAimDirectionDeg()
+
     const monitorShot =
       currentLie === 'GREEN'
-        ? createMockPutt()
-        : createMockFullShot()
+        ? createMockPutt(remainingYards, aimDirectionDeg)
+        : createMockFullShot(remainingYards, aimDirectionDeg)
 
     setShot(toSimulatorShot(monitorShot))
     setStrokes((value) => value + 1)
