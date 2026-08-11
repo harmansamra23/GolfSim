@@ -4,21 +4,20 @@ import { useRef, type ComponentRef } from 'react'
 import * as THREE from 'three'
 
 import type { BallStateReader } from '../ball/BallState'
-import {
-  fairwayCenterX,
-  plumasLakeHole1,
-} from '../courses/plumasLakeHole1'
+import type { GolfHole } from '../courses/courseTypes'
 
 export type CameraPreference = 'AUTO' | 'FREE'
 
 type CameraManagerProps = {
   getBallState: BallStateReader
   preference: CameraPreference
+  hole: GolfHole
 }
 
 export function CameraManager({
   getBallState,
   preference,
+  hole,
 }: CameraManagerProps) {
   const { camera } = useThree()
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
@@ -44,14 +43,20 @@ export function CameraManager({
 
     if (state.phase === 'ADDRESS') {
       desiredPosition.current.set(
-        plumasLakeHole1.tee.x,
+        hole.tee.x,
         1.8,
-        plumasLakeHole1.tee.z + 10
+        hole.tee.z + 10
+      )
+
+      const targetZ = THREE.MathUtils.lerp(
+        hole.tee.z,
+        hole.green.center.z,
+        0.22
       )
       desiredTarget.current.set(
-        fairwayCenterX(-80),
+        THREE.MathUtils.lerp(hole.tee.x, hole.green.center.x, 0.22),
         1,
-        -80
+        targetZ
       )
     } else if (state.phase === 'FLIGHT') {
       desiredPosition.current.set(
