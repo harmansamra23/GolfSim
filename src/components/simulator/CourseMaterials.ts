@@ -103,13 +103,13 @@ function addGrassFibers(
 
     context.strokeStyle =
       Math.random() > 0.5
-        ? `rgba(220,245,205,${Math.random() * alpha})`
-        : `rgba(10,40,18,${Math.random() * alpha})`
+        ? `rgba(225,248,207,${Math.random() * alpha})`
+        : `rgba(8,35,15,${Math.random() * alpha})`
 
     context.beginPath()
     context.moveTo(x, y)
     context.lineTo(
-      x + (Math.random() - 0.5) * 1.5,
+      x + (Math.random() - 0.5) * 2,
       y - length
     )
     context.stroke()
@@ -120,13 +120,14 @@ function addRoughPatches(
   context: CanvasRenderingContext2D,
   width: number,
   height: number,
-  count: number
+  count: number,
+  strength: number
 ) {
   for (let i = 0; i < count; i++) {
     const x = Math.random() * width
     const y = Math.random() * height
-    const radiusX = 7 + Math.random() * 26
-    const radiusY = 5 + Math.random() * 18
+    const radiusX = 10 + Math.random() * 38
+    const radiusY = 7 + Math.random() * 28
 
     context.beginPath()
     context.ellipse(
@@ -140,9 +141,9 @@ function addRoughPatches(
     )
 
     context.fillStyle =
-      Math.random() > 0.55
-        ? 'rgba(5,38,13,0.08)'
-        : 'rgba(135,176,100,0.06)'
+      Math.random() > 0.5
+        ? `rgba(4,30,12,${strength})`
+        : `rgba(150,190,105,${strength * 0.7})`
 
     context.fill()
   }
@@ -150,15 +151,15 @@ function addRoughPatches(
 
 const fairwayColor = createCanvasTexture(
   (context, width, height) => {
-    const stripeCount = 10
+    const stripeCount = 8
     const stripeHeight = height / stripeCount
 
     for (let i = 0; i < stripeCount; i++) {
       const evenStripe = i % 2 === 0
 
       context.fillStyle = evenStripe
-        ? '#4f9947'
-        : '#61aa50'
+        ? '#79b85b'
+        : '#91ca69'
 
       context.fillRect(
         0,
@@ -177,8 +178,8 @@ const fairwayColor = createCanvasTexture(
       gradient.addColorStop(
         0,
         evenStripe
-          ? 'rgba(255,255,255,0.055)'
-          : 'rgba(0,0,0,0.028)'
+          ? 'rgba(255,255,255,0.09)'
+          : 'rgba(0,0,0,0.055)'
       )
       gradient.addColorStop(1, 'rgba(0,0,0,0)')
 
@@ -189,114 +190,124 @@ const fairwayColor = createCanvasTexture(
         width,
         stripeHeight
       )
+
+      context.fillStyle = 'rgba(255,255,255,0.04)'
+      context.fillRect(
+        0,
+        i * stripeHeight,
+        width,
+        2
+      )
     }
 
     addGrassFibers(
       context,
       width,
       height,
-      1800,
-      3,
-      0.04
+      1300,
+      2.5,
+      0.035
     )
 
     addFineNoise(
       context,
       width,
       height,
-      1200,
-      0.028
+      900,
+      0.025
     )
   },
   1,
-  8
+  7
 )
 
 const firstCutColor = createCanvasTexture(
   (context, width, height) => {
-    context.fillStyle = '#3c783d'
+    context.fillStyle = '#527f43'
     context.fillRect(0, 0, width, height)
-
-    addGrassFibers(
-      context,
-      width,
-      height,
-      3200,
-      6,
-      0.055
-    )
 
     addRoughPatches(
       context,
       width,
       height,
-      40
+      34,
+      0.055
+    )
+
+    addGrassFibers(
+      context,
+      width,
+      height,
+      3600,
+      7,
+      0.075
     )
 
     addFineNoise(
       context,
       width,
       height,
-      2200,
-      0.045
+      2400,
+      0.055
     )
   },
-  8,
-  28
+  9,
+  30
 )
 
 const roughColor = createCanvasTexture(
   (context, width, height) => {
-    context.fillStyle = '#285633'
+    context.fillStyle = '#274c2d'
     context.fillRect(0, 0, width, height)
 
     addRoughPatches(
       context,
       width,
       height,
-      115
+      130,
+      0.11
     )
 
     addGrassFibers(
       context,
       width,
       height,
-      6800,
-      12,
-      0.085
+      7600,
+      15,
+      0.13
     )
 
     addFineNoise(
       context,
       width,
       height,
-      5200,
-      0.065
+      5600,
+      0.085
     )
   },
-  16,
-  44
+  14,
+  38
 )
 
 const teeColor = createCanvasTexture(
   (context, width, height) => {
-    context.fillStyle = '#69ad57'
+    context.fillStyle = '#82c463'
     context.fillRect(0, 0, width, height)
 
-    for (let y = 0; y < height; y += 56) {
+    for (let y = 0; y < height; y += 64) {
       context.fillStyle =
-        y % 112 === 0
-          ? 'rgba(255,255,255,0.035)'
-          : 'rgba(0,0,0,0.022)'
-      context.fillRect(0, y, width, 56)
+        y % 128 === 0
+          ? 'rgba(255,255,255,0.055)'
+          : 'rgba(0,0,0,0.025)'
+      context.fillRect(0, y, width, 64)
     }
 
     addFineNoise(
       context,
       width,
       height,
-      850,
-      0.02
+      650,
+      0.018
     )
   },
   4,
@@ -305,7 +316,7 @@ const teeColor = createCanvasTexture(
 
 const greenColor = createCanvasTexture(
   (context, width, height) => {
-    context.fillStyle = '#72b55b'
+    context.fillStyle = '#8bcf6d'
     context.fillRect(0, 0, width, height)
 
     const gradient = context.createLinearGradient(
@@ -315,9 +326,9 @@ const greenColor = createCanvasTexture(
       height
     )
 
-    gradient.addColorStop(0, 'rgba(255,255,255,0.025)')
+    gradient.addColorStop(0, 'rgba(255,255,255,0.045)')
     gradient.addColorStop(0.5, 'rgba(255,255,255,0)')
-    gradient.addColorStop(1, 'rgba(0,0,0,0.025)')
+    gradient.addColorStop(1, 'rgba(0,0,0,0.03)')
 
     context.fillStyle = gradient
     context.fillRect(0, 0, width, height)
@@ -326,8 +337,8 @@ const greenColor = createCanvasTexture(
       context,
       width,
       height,
-      550,
-      0.014
+      420,
+      0.012
     )
   },
   5,
@@ -373,13 +384,13 @@ export const courseMaterials = {
     map: roughColor,
     normalMap: loadDetail(
       '/textures/rough/normal.jpg',
-      20,
-      58
+      12,
+      34
     ),
     roughnessMap: loadDetail(
       '/textures/rough/roughness.jpg',
-      20,
-      58
+      12,
+      34
     ),
   },
 
@@ -387,13 +398,13 @@ export const courseMaterials = {
     map: firstCutColor,
     normalMap: loadDetail(
       '/textures/rough/normal.jpg',
-      14,
-      42
+      10,
+      32
     ),
     roughnessMap: loadDetail(
       '/textures/rough/roughness.jpg',
-      14,
-      42
+      10,
+      32
     ),
   },
 
@@ -401,13 +412,13 @@ export const courseMaterials = {
     map: fairwayColor,
     normalMap: loadDetail(
       '/textures/fairway/normal.jpg',
-      6,
-      34
+      4,
+      26
     ),
     roughnessMap: loadDetail(
       '/textures/fairway/roughness.jpg',
-      6,
-      34
+      4,
+      26
     ),
   },
 
@@ -415,13 +426,13 @@ export const courseMaterials = {
     map: teeColor,
     normalMap: loadDetail(
       '/textures/green/normal.jpg',
-      5,
-      5
+      4,
+      4
     ),
     roughnessMap: loadDetail(
       '/textures/green/roughness.jpg',
-      5,
-      5
+      4,
+      4
     ),
   },
 
@@ -429,13 +440,13 @@ export const courseMaterials = {
     map: greenColor,
     normalMap: loadDetail(
       '/textures/green/normal.jpg',
-      7,
-      7
+      5,
+      5
     ),
     roughnessMap: loadDetail(
       '/textures/green/roughness.jpg',
-      7,
-      7
+      5,
+      5
     ),
   },
 
