@@ -1,5 +1,6 @@
 import type { GolfHole } from '../courses/courseTypes'
 import { Bunkers } from './Bunkers'
+import { CourseScenery } from './CourseScenery'
 import { Fairway } from './Fairway'
 import { Flag } from './Flag'
 import { GrassDetail } from './GrassDetail'
@@ -11,6 +12,7 @@ import { Vegetation } from './Vegetation'
 export function CourseHole({ hole }: { hole: GolfHole }) {
   return (
     <>
+      <CourseScenery hole={hole} />
       <Terrain hole={hole} />
       <Fairway hole={hole} />
       <TeeBox hole={hole} />
