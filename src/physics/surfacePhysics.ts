@@ -1,22 +1,17 @@
 import type {
   EllipseZone,
+  GolfHole,
   SurfaceType,
 } from '../courses/courseTypes'
-
 import {
-  FAIRWAY_END_Z,
-  FAIRWAY_START_Z,
   cartPathCenterX,
   fairwayCenterX,
   fairwayHalfWidth,
-  plumasLakeHole1,
-} from '../courses/plumasLakeHole1'
+} from '../courses/holeGeometryMath'
 
 export type SurfacePhysics = {
   bounce: number
-
   horizontalRetention: number
-
   rollingFriction: number
 }
 
@@ -25,29 +20,18 @@ function insideEllipse(
   z: number,
   ellipse: EllipseZone
 ) {
-  const dx =
-    (x -
-      ellipse.center.x) /
-    ellipse.radiusX
+  const dx = (x - ellipse.center.x) / ellipse.radiusX
+  const dz = (z - ellipse.center.z) / ellipse.radiusZ
 
-  const dz =
-    (z -
-      ellipse.center.z) /
-    ellipse.radiusZ
-
-  return (
-    dx * dx +
-      dz * dz <=
-    1
-  )
+  return dx * dx + dz * dz <= 1
 }
 
 export function getSurfaceAtPosition(
+  hole: GolfHole,
   x: number,
   z: number
 ): SurfaceType {
-  const tee =
-    plumasLakeHole1.tee
+  const tee = hole.tee
 
   if (
     Math.abs(x - tee.x) <= 6 &&
@@ -56,64 +40,37 @@ export function getSurfaceAtPosition(
     return 'TEE'
   }
 
-  if (
-    insideEllipse(
-      x,
-      z,
-      plumasLakeHole1.green
-    )
-  ) {
+  if (insideEllipse(x, z, hole.green)) {
     return 'GREEN'
   }
 
-  for (
-    const bunker
-    of plumasLakeHole1.bunkers
-  ) {
-    if (
-      insideEllipse(
-        x,
-        z,
-        bunker
-      )
-    ) {
+  for (const bunker of hole.bunkers) {
+    if (insideEllipse(x, z, bunker)) {
       return 'BUNKER'
     }
   }
 
   if (
-    z <= FAIRWAY_START_Z &&
-    z >= FAIRWAY_END_Z
+    z <= hole.fairway.startZ &&
+    z >= hole.fairway.endZ
   ) {
-    const pathX =
-      cartPathCenterX(z)
+    if (hole.cartPath) {
+      const pathX = cartPathCenterX(hole, z)
 
-    if (
-      Math.abs(x - pathX) <=
-      1.6
-    ) {
-      return 'PATH'
+      if (Math.abs(x - pathX) <= hole.cartPath.halfWidth + 0.25) {
+        return 'PATH'
+      }
     }
 
-    const center =
-      fairwayCenterX(z)
+    const center = fairwayCenterX(hole, z)
+    const width = fairwayHalfWidth(hole, z)
+    const distance = Math.abs(x - center)
 
-    const width =
-      fairwayHalfWidth(z)
-
-    const distance =
-      Math.abs(x - center)
-
-    if (
-      distance <= width
-    ) {
+    if (distance <= width) {
       return 'FAIRWAY'
     }
 
-    if (
-      distance <=
-      width + 4
-    ) {
+    if (distance <= width + 4) {
       return 'FIRST_CUT'
     }
   }
