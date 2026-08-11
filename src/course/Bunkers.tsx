@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import * as THREE from 'three'
 
 import { courseMaterials } from '../components/simulator/CourseMaterials'
-import { plumasLakeHole1 } from '../courses/plumasLakeHole1'
+import type { GolfHole } from '../courses/courseTypes'
 
 function createBunkerGeometry() {
   const geometry = new THREE.CircleGeometry(1, 64)
@@ -15,12 +15,12 @@ function createBunkerGeometry() {
   return geometry
 }
 
-export function Bunkers() {
+export function Bunkers({ hole }: { hole: GolfHole }) {
   const bowlGeometry = useMemo(() => createBunkerGeometry(), [])
 
   return (
     <>
-      {plumasLakeHole1.bunkers.map((bunker, index) => (
+      {hole.bunkers.map((bunker, index) => (
         <group
           key={index}
           position={[bunker.center.x, 0.095, bunker.center.z]}
