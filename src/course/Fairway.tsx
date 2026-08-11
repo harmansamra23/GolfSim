@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Vector2 } from 'three'
 
 import { courseMaterials } from '../components/simulator/CourseMaterials'
+import type { GolfHole } from '../courses/courseTypes'
 import {
   createCartPathShape,
   createCourseShape,
@@ -11,20 +12,20 @@ const firstCutNormalScale = new Vector2(1.35, 1.35)
 const fairwayNormalScale = new Vector2(0.55, 0.55)
 const pathNormalScale = new Vector2(0.75, 0.75)
 
-export function Fairway() {
+export function Fairway({ hole }: { hole: GolfHole }) {
   const firstCutShape = useMemo(
-    () => createCourseShape(4),
-    []
+    () => createCourseShape(hole, 4),
+    [hole]
   )
 
   const fairwayShape = useMemo(
-    () => createCourseShape(0),
-    []
+    () => createCourseShape(hole, 0),
+    [hole]
   )
 
   const pathShape = useMemo(
-    () => createCartPathShape(),
-    []
+    () => createCartPathShape(hole),
+    [hole]
   )
 
   return (
@@ -59,20 +60,22 @@ export function Fairway() {
         />
       </mesh>
 
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0.05, 0]}
-        receiveShadow
-      >
-        <shapeGeometry args={[pathShape]} />
-        <meshStandardMaterial
-          map={courseMaterials.path.map}
-          normalMap={courseMaterials.path.normalMap}
-          normalScale={pathNormalScale}
-          roughnessMap={courseMaterials.path.roughnessMap}
-          roughness={1}
-        />
-      </mesh>
+      {pathShape ? (
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[0, 0.05, 0]}
+          receiveShadow
+        >
+          <shapeGeometry args={[pathShape]} />
+          <meshStandardMaterial
+            map={courseMaterials.path.map}
+            normalMap={courseMaterials.path.normalMap}
+            normalScale={pathNormalScale}
+            roughnessMap={courseMaterials.path.roughnessMap}
+            roughness={1}
+          />
+        </mesh>
+      ) : null}
     </>
   )
 }
