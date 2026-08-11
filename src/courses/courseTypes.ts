@@ -18,6 +18,12 @@ export type EllipseZone = {
   radiusZ: number
 }
 
+export type FairwayControlPoint = {
+  t: number
+  centerOffsetX: number
+  halfWidth: number
+}
+
 export type FairwayDefinition = {
   startZ: number
   endZ: number
@@ -27,6 +33,7 @@ export type FairwayDefinition = {
   curveAmplitude: number
   curveCycles: number
   endOffsetX: number
+  profile?: FairwayControlPoint[]
 }
 
 export type CartPathDefinition = {
@@ -38,6 +45,7 @@ export type CartPathDefinition = {
 
 export type GolfHole = {
   number: number
+  name?: string
   par: number
   yardage: number
   tee: GolfPoint
