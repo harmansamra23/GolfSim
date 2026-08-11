@@ -1,9 +1,43 @@
 import * as THREE from 'three'
 
-import type { GolfHole } from './courseTypes'
+import type {
+  FairwayControlPoint,
+  GolfHole,
+} from './courseTypes'
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
+}
+
+function interpolateProfile(
+  profile: FairwayControlPoint[],
+  t: number,
+  key: 'centerOffsetX' | 'halfWidth'
+) {
+  if (profile.length === 0) return 0
+  if (t <= profile[0].t) return profile[0][key]
+  if (t >= profile[profile.length - 1].t) {
+    return profile[profile.length - 1][key]
+  }
+
+  for (let index = 1; index < profile.length; index++) {
+    const current = profile[index]
+    const previous = profile[index - 1]
+
+    if (t <= current.t) {
+      const segment =
+        (t - previous.t) / Math.max(0.0001, current.t - previous.t)
+      const eased = segment * segment * (3 - 2 * segment)
+
+      return THREE.MathUtils.lerp(
+        previous[key],
+        current[key],
+        eased
+      )
+    }
+  }
+
+  return profile[profile.length - 1][key]
 }
 
 export function fairwayProgress(hole: GolfHole, z: number) {
@@ -18,7 +52,11 @@ export function fairwayProgress(hole: GolfHole, z: number) {
 
 export function fairwayCenterX(hole: GolfHole, z: number) {
   const t = fairwayProgress(hole, z)
-  const { curveAmplitude, curveCycles, endOffsetX } = hole.fairway
+  const { profile, curveAmplitude, curveCycles, endOffsetX } = hole.fairway
+
+  if (profile && profile.length > 0) {
+    return hole.tee.x + interpolateProfile(profile, t, 'centerOffsetX')
+  }
 
   return (
     hole.tee.x +
@@ -30,10 +68,15 @@ export function fairwayCenterX(hole: GolfHole, z: number) {
 export function fairwayHalfWidth(hole: GolfHole, z: number) {
   const t = fairwayProgress(hole, z)
   const {
+    profile,
     baseHalfWidth,
     middleWidthBoost,
     endTaper,
   } = hole.fairway
+
+  if (profile && profile.length > 0) {
+    return Math.max(5.5, interpolateProfile(profile, t, 'halfWidth'))
+  }
 
   return (
     baseHalfWidth +
@@ -52,7 +95,7 @@ export function cartPathCenterX(hole: GolfHole, z: number) {
   const t = fairwayProgress(hole, z)
 
   return (
-    hole.tee.x +
+    fairwayCenterX(hole, z) +
     path.offsetX +
     Math.sin(t * Math.PI * path.waveCycles) * path.waveAmplitude
   )
