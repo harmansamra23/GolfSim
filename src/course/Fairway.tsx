@@ -1,10 +1,15 @@
 import { useMemo } from 'react'
+import { Vector2 } from 'three'
 
 import { courseMaterials } from '../components/simulator/CourseMaterials'
 import {
   createCartPathShape,
   createCourseShape,
 } from './courseGeometry'
+
+const firstCutNormalScale = new Vector2(1.35, 1.35)
+const fairwayNormalScale = new Vector2(0.55, 0.55)
+const pathNormalScale = new Vector2(0.75, 0.75)
 
 export function Fairway() {
   const firstCutShape = useMemo(
@@ -33,8 +38,9 @@ export function Fairway() {
         <meshStandardMaterial
           map={courseMaterials.firstCut.map}
           normalMap={courseMaterials.firstCut.normalMap}
+          normalScale={firstCutNormalScale}
           roughnessMap={courseMaterials.firstCut.roughnessMap}
-          roughness={0.96}
+          roughness={1}
         />
       </mesh>
 
@@ -47,8 +53,9 @@ export function Fairway() {
         <meshStandardMaterial
           map={courseMaterials.fairway.map}
           normalMap={courseMaterials.fairway.normalMap}
+          normalScale={fairwayNormalScale}
           roughnessMap={courseMaterials.fairway.roughnessMap}
-          roughness={0.88}
+          roughness={0.72}
         />
       </mesh>
 
@@ -61,6 +68,7 @@ export function Fairway() {
         <meshStandardMaterial
           map={courseMaterials.path.map}
           normalMap={courseMaterials.path.normalMap}
+          normalScale={pathNormalScale}
           roughnessMap={courseMaterials.path.roughnessMap}
           roughness={1}
         />
