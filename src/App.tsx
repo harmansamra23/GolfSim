@@ -188,13 +188,16 @@ function App() {
           {
             id: result.id,
             ballSpeed: shot.ballSpeed,
-            carry: result.carry ?? 0,
-            total: result.totalDistance ?? 0,
+            carry: result.carry,
+            total: result.totalDistance,
           },
           ...history,
         ].slice(0, 12))
 
-        resetForHole(drivingRangeHole, false)
+        // Clear the completed shot before resetting the range ball.
+        // Leaving the same shot id mounted causes the scene to detect it
+        // as a brand-new shot after reset and replay forever.
+        resetForHole(drivingRangeHole, true)
       }
       return
     }
@@ -228,7 +231,7 @@ function App() {
   }
 
   function nextHole() {
-    if (!holeComplete || shotInProgress || round.complete) return
+    if (shotInProgress || round.complete) return
 
     const nextRound = advanceRound(round, course)
     const nextHoleData = course.holes[nextRound.currentHoleIndex]
@@ -261,6 +264,10 @@ function App() {
   const displayedScore = completedScore ?? liveScore
   const relativeToPar = scoreToPar(displayedScore)
   const roundRelative = roundTotalToPar(round.scores)
+  const hasNextHole =
+    mode === 'ROUND' &&
+    !round.complete &&
+    round.currentHoleIndex < course.holes.length - 1
 
   return (
     <main className="app">
@@ -426,8 +433,14 @@ function App() {
               : 'TEST SHOT'}
           </button>
 
-          {mode === 'ROUND' && holeComplete && !round.complete ? (
-            <button onClick={nextHole}>NEXT HOLE</button>
+          {hasNextHole ? (
+            <button
+              className={holeComplete ? '' : 'secondary-action'}
+              onClick={nextHole}
+              disabled={shotInProgress}
+            >
+              {holeComplete ? 'NEXT HOLE' : 'SKIP TO NEXT HOLE'}
+            </button>
           ) : null}
 
           {mode === 'ROUND' && round.complete ? (
