@@ -1,44 +1,43 @@
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Sky } from '@react-three/drei'
+import { Canvas, useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import * as THREE from 'three'
 
+import type {
+  BallPhase,
+  BallState,
+  BallStateReader,
+  BallStateWriter,
+} from '../../ball/BallState'
+import {
+  CameraManager,
+  type CameraPreference,
+} from '../../camera/CameraManager'
 import { CourseHole } from '../../course/CourseHole'
+import { plumasLakeHole1 } from '../../courses/plumasLakeHole1'
+import {
+  BALL_FLIGHT_STEP_SECONDS,
+  createLaunchVelocity,
+  stepBallFlight,
+} from '../../physics/BallFlightPhysics'
+import {
+  applyGroundImpact,
+  stepGroundRoll,
+} from '../../physics/GroundPhysics'
+import {
+  createPuttVelocity,
+  isBallHoled,
+  stepPutt,
+} from '../../physics/PuttingPhysics'
+import { getSurfaceAtPosition } from '../../physics/surfacePhysics'
+import { metersToYards } from '../../simulator/units'
 import type { ShotData, ShotResult } from '../../types/shot'
-import {
-  getSurfaceAtPosition,
-  getSurfacePhysics,
-} from '../../physics/surfacePhysics'
-import {
-  fairwayCenterX,
-  plumasLakeHole1,
-} from '../../courses/plumasLakeHole1'
 
 type GolfSceneProps = {
   shot: ShotData | null
+  cameraPreference: CameraPreference
   onShotResult: (result: ShotResult) => void
 }
-
-type BallPhase =
-  | 'ADDRESS'
-  | 'FLIGHT'
-  | 'LANDING'
-  | 'ROLLING'
-  | 'STOPPED'
-
-type BallState = {
-  position: THREE.Vector3
-  velocity: THREE.Vector3
-  phase: BallPhase
-}
-
-type BallStateReader = () => BallState
-
-type BallStateWriter = (
-  phase: BallPhase,
-  position: THREE.Vector3,
-  velocity: THREE.Vector3
-) => void
 
 const tracerCoreMaterial = new THREE.MeshBasicMaterial({
   color: '#ffffff',
@@ -47,12 +46,16 @@ const tracerCoreMaterial = new THREE.MeshBasicMaterial({
 const tracerGlowMaterial = new THREE.MeshBasicMaterial({
   color: '#9fdcff',
   transparent: true,
-  opacity: 0.24,
+  opacity: 0.18,
   blending: THREE.AdditiveBlending,
   depthWrite: false,
 })
 
-function GolfScene({ shot, onShotResult }: GolfSceneProps) {
+function GolfScene({
+  shot,
+  cameraPreference,
+  onShotResult,
+}: GolfSceneProps) {
   const ballState = useRef<BallState>({
     position: new THREE.Vector3(
       plumasLakeHole1.tee.x,
@@ -88,38 +91,40 @@ function GolfScene({ shot, onShotResult }: GolfSceneProps) {
       gl={{
         antialias: true,
         toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 1.05,
+        toneMappingExposure: 1.08,
       }}
     >
-      <color attach="background" args={['#9bcbe6']} />
-      <fog attach="fog" args={['#9bcbe6', 260, 900]} />
+      <color attach="background" args={['#8ebbd7']} />
+      <fog attach="fog" args={['#8ebbd7', 300, 850]} />
 
       <Sky
         distance={450000}
-        sunPosition={[80, 30, 45]}
-        turbidity={7}
-        rayleigh={1.7}
+        sunPosition={[70, 38, 30]}
+        turbidity={5}
+        rayleigh={1.35}
       />
 
+      <ambientLight intensity={0.16} />
+
       <hemisphereLight
-        intensity={1.2}
-        color="#e8f5ff"
-        groundColor="#294c2c"
+        intensity={0.82}
+        color="#eef8ff"
+        groundColor="#244528"
       />
 
       <directionalLight
-        position={[50, 70, 35]}
-        intensity={2.5}
+        position={[58, 86, 34]}
+        intensity={3}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
-        shadow-camera-left={-90}
-        shadow-camera-right={90}
-        shadow-camera-top={90}
-        shadow-camera-bottom={-90}
+        shadow-camera-left={-95}
+        shadow-camera-right={95}
+        shadow-camera-top={95}
+        shadow-camera-bottom={-95}
         shadow-camera-near={1}
-        shadow-camera-far={260}
-        shadow-bias={-0.00025}
+        shadow-camera-far={300}
+        shadow-bias={-0.0002}
       />
 
       <CourseHole />
@@ -130,91 +135,12 @@ function GolfScene({ shot, onShotResult }: GolfSceneProps) {
         onShotResult={onShotResult}
       />
 
-      <CameraRig getBallState={getBallState} />
+      <CameraManager
+        getBallState={getBallState}
+        preference={cameraPreference}
+      />
     </Canvas>
   )
-}
-
-function CameraRig({
-  getBallState,
-}: {
-  getBallState: BallStateReader
-}) {
-  const { camera } = useThree()
-  const desiredPosition = useRef(new THREE.Vector3())
-  const desiredTarget = useRef(new THREE.Vector3())
-
-  useFrame((_, delta) => {
-    const state = getBallState()
-    const ball = state.position
-
-    if (state.phase === 'ADDRESS') {
-      desiredPosition.current.set(
-        plumasLakeHole1.tee.x,
-        1.8,
-        plumasLakeHole1.tee.z + 10
-      )
-      desiredTarget.current.set(
-        fairwayCenterX(-80),
-        1,
-        -80
-      )
-    }
-
-    if (state.phase === 'FLIGHT') {
-      desiredPosition.current.set(
-        ball.x,
-        ball.y + 5.5,
-        ball.z + 12
-      )
-      desiredTarget.current.set(
-        ball.x,
-        ball.y + 1,
-        ball.z - 10
-      )
-    }
-
-    if (state.phase === 'LANDING') {
-      desiredPosition.current.set(
-        ball.x + 7,
-        ball.y + 5,
-        ball.z + 13
-      )
-      desiredTarget.current.copy(ball)
-    }
-
-    if (state.phase === 'ROLLING') {
-      desiredPosition.current.set(
-        ball.x + 6,
-        4,
-        ball.z + 10
-      )
-      desiredTarget.current.set(
-        ball.x,
-        0.3,
-        ball.z
-      )
-    }
-
-    if (state.phase === 'STOPPED') {
-      desiredPosition.current.set(
-        ball.x + 7,
-        4.5,
-        ball.z + 10
-      )
-      desiredTarget.current.set(
-        ball.x,
-        0.3,
-        ball.z
-      )
-    }
-
-    const smoothing = 1 - Math.exp(-4 * delta)
-    camera.position.lerp(desiredPosition.current, smoothing)
-    camera.lookAt(desiredTarget.current)
-  })
-
-  return null
 }
 
 function AnimatedGolfBall({
@@ -236,15 +162,7 @@ function AnimatedGolfBall({
       plumasLakeHole1.tee.z
     )
   )
-
-  const startPosition = useRef(
-    new THREE.Vector3(
-      plumasLakeHole1.tee.x,
-      0.2,
-      plumasLakeHole1.tee.z
-    )
-  )
-
+  const startPosition = useRef(position.current.clone())
   const velocity = useRef(new THREE.Vector3())
   const currentShot = useRef<ShotData | null>(null)
   const lastShotId = useRef<number | null>(null)
@@ -255,6 +173,7 @@ function AnimatedGolfBall({
   const carryReported = useRef(false)
   const carryYards = useRef(0)
   const tracerPoints = useRef<THREE.Vector3[]>([])
+  const flightAccumulator = useRef(0)
 
   function clearTracer() {
     if (!tracerRef.current) return
@@ -270,42 +189,26 @@ function AnimatedGolfBall({
 
   function startShot(newShot: ShotData) {
     currentShot.current = newShot
-
-    position.current.set(
-      plumasLakeHole1.tee.x,
-      0.2,
-      plumasLakeHole1.tee.z
-    )
     startPosition.current.copy(position.current)
-
-    if (ballRef.current) {
-      ballRef.current.position.copy(position.current)
-    }
 
     clearTracer()
     tracerPoints.current = [position.current.clone()]
     bounceCount.current = 0
-    rolling.current = false
-    carryReported.current = false
+    carryReported.current = newShot.kind === 'PUTT'
     carryYards.current = 0
+    flightAccumulator.current = 0
 
-    const speed = newShot.ballSpeed * 0.44704
-    const launchAngle = THREE.MathUtils.degToRad(
-      newShot.launchAngle
-    )
-    const direction = THREE.MathUtils.degToRad(
-      newShot.launchDirection
-    )
-    const horizontal = speed * Math.cos(launchAngle)
-
-    velocity.current.set(
-      horizontal * Math.sin(direction),
-      speed * Math.sin(launchAngle),
-      -horizontal * Math.cos(direction)
-    )
+    if (newShot.kind === 'PUTT') {
+      velocity.current.copy(createPuttVelocity(newShot))
+      rolling.current = true
+      phase.current = 'ROLLING'
+    } else {
+      velocity.current.copy(createLaunchVelocity(newShot))
+      rolling.current = false
+      phase.current = 'FLIGHT'
+    }
 
     active.current = true
-    phase.current = 'FLIGHT'
 
     setBallState(
       phase.current,
@@ -314,7 +217,108 @@ function AnimatedGolfBall({
     )
   }
 
-  useFrame((_, delta) => {
+  function reportCarry(current: ShotData) {
+    if (carryReported.current) return
+
+    const carryMeters = Math.hypot(
+      position.current.x - startPosition.current.x,
+      position.current.z - startPosition.current.z
+    )
+
+    carryYards.current = metersToYards(carryMeters)
+    carryReported.current = true
+
+    onShotResult({
+      id: current.id,
+      carry: carryYards.current,
+      lie: getSurfaceAtPosition(
+        position.current.x,
+        position.current.z
+      ),
+    })
+  }
+
+  function finishShot(current: ShotData, holed: boolean) {
+    velocity.current.set(0, 0, 0)
+    active.current = false
+    phase.current = 'STOPPED'
+
+    if (holed) {
+      position.current.x = plumasLakeHole1.green.center.x
+      position.current.z = plumasLakeHole1.green.center.z
+    }
+
+    const totalMeters = Math.hypot(
+      position.current.x - startPosition.current.x,
+      position.current.z - startPosition.current.z
+    )
+
+    const finalSurface = holed
+      ? 'GREEN'
+      : getSurfaceAtPosition(
+          position.current.x,
+          position.current.z
+        )
+
+    onShotResult({
+      id: current.id,
+      carry: current.kind === 'PUTT' ? 0 : carryYards.current,
+      totalDistance: metersToYards(totalMeters),
+      lie: finalSurface,
+      holed,
+      finalPosition: {
+        x: position.current.x,
+        y: position.current.y,
+        z: position.current.z,
+      },
+    })
+  }
+
+  function handleAirborneStep(
+    current: ShotData,
+    dt: number
+  ) {
+    stepBallFlight(velocity.current, current, dt)
+    position.current.addScaledVector(velocity.current, dt)
+
+    if (
+      velocity.current.y < 0 &&
+      position.current.y < 8
+    ) {
+      phase.current = 'LANDING'
+    }
+
+    if (
+      position.current.y > 0.2 ||
+      velocity.current.y >= 0
+    ) {
+      return
+    }
+
+    position.current.y = 0.2
+    reportCarry(current)
+
+    bounceCount.current += 1
+
+    const surface = getSurfaceAtPosition(
+      position.current.x,
+      position.current.z
+    )
+
+    const impact = applyGroundImpact(
+      velocity.current,
+      surface,
+      bounceCount.current
+    )
+
+    if (impact.shouldRoll) {
+      velocity.current.y = 0
+      rolling.current = true
+      phase.current = 'ROLLING'
+    }
+  }
+
+  useFrame((_, frameDelta) => {
     if (shot && shot.id !== lastShotId.current) {
       lastShotId.current = shot.id
       startShot(shot)
@@ -325,143 +329,68 @@ function AnimatedGolfBall({
     const current = currentShot.current
     if (!current) return
 
-    const dt = Math.min(delta, 0.02)
+    const delta = Math.min(frameDelta, 0.05)
 
     if (!rolling.current) {
-      velocity.current.y -= 9.81 * dt
+      flightAccumulator.current += delta
+      let substeps = 0
 
-      const drag = 0.994
-      velocity.current.multiplyScalar(
-        Math.pow(drag, dt * 60)
-      )
-
-      const speed = velocity.current.length()
-
-      velocity.current.x +=
-        current.spinAxis * 0.0007 * speed * dt
-
-      velocity.current.y +=
-        current.spinRate * 0.000013 * speed * dt
-
-      position.current.addScaledVector(
-        velocity.current,
-        dt
-      )
-
-      if (
-        velocity.current.y < 0 &&
-        position.current.y < 8
+      while (
+        flightAccumulator.current >= BALL_FLIGHT_STEP_SECONDS &&
+        substeps < 8 &&
+        !rolling.current
       ) {
-        phase.current = 'LANDING'
+        handleAirborneStep(
+          current,
+          BALL_FLIGHT_STEP_SECONDS
+        )
+        flightAccumulator.current -= BALL_FLIGHT_STEP_SECONDS
+        substeps += 1
       }
+    } else {
+      position.current.y = 0.2
+      position.current.addScaledVector(velocity.current, delta)
 
-      if (
-        position.current.y <= 0.2 &&
-        velocity.current.y < 0
-      ) {
-        position.current.y = 0.2
+      let groundSpeed: number
 
+      if (current.kind === 'PUTT') {
+        groundSpeed = stepPutt(velocity.current, delta)
+
+        if (
+          isBallHoled(
+            position.current,
+            plumasLakeHole1.green.center.x,
+            plumasLakeHole1.green.center.z
+          )
+        ) {
+          finishShot(current, true)
+          return
+        }
+      } else {
         const surface = getSurfaceAtPosition(
           position.current.x,
           position.current.z
         )
-        const physics = getSurfacePhysics(surface)
 
-        if (!carryReported.current) {
-          const dx =
-            position.current.x - startPosition.current.x
-          const dz =
-            position.current.z - startPosition.current.z
-          const carryMeters = Math.sqrt(
-            dx * dx + dz * dz
-          )
-
-          carryYards.current = carryMeters * 1.09361
-          carryReported.current = true
-
-          onShotResult({
-            id: current.id,
-            carry: carryYards.current,
-            lie: surface,
-          })
-        }
-
-        bounceCount.current += 1
-
-        const impactSpeed = Math.abs(velocity.current.y)
-        const bounceMultiplier =
-          bounceCount.current === 1
-            ? physics.bounce
-            : physics.bounce * 0.52
-
-        velocity.current.y = impactSpeed * bounceMultiplier
-        velocity.current.x *= physics.horizontalRetention
-        velocity.current.z *= physics.horizontalRetention
-
-        if (
-          surface === 'BUNKER' ||
-          bounceCount.current >= 3 ||
-          velocity.current.y < 0.9
-        ) {
-          velocity.current.y = 0
-          rolling.current = true
-          phase.current = 'ROLLING'
-        }
-      }
-    } else {
-      position.current.y = 0.2
-      position.current.x += velocity.current.x * dt
-      position.current.z += velocity.current.z * dt
-
-      const surface = getSurfaceAtPosition(
-        position.current.x,
-        position.current.z
-      )
-      const physics = getSurfacePhysics(surface)
-      const friction = Math.pow(
-        physics.rollingFriction,
-        dt * 60
-      )
-
-      velocity.current.x *= friction
-      velocity.current.z *= friction
-
-      const groundSpeed = Math.sqrt(
-        velocity.current.x * velocity.current.x +
-          velocity.current.z * velocity.current.z
-      )
-
-      if (groundSpeed < 0.4) {
-        velocity.current.set(0, 0, 0)
-        active.current = false
-        phase.current = 'STOPPED'
-
-        const dx =
-          position.current.x - startPosition.current.x
-        const dz =
-          position.current.z - startPosition.current.z
-        const totalMeters = Math.sqrt(dx * dx + dz * dz)
-
-        const finalSurface = getSurfaceAtPosition(
-          position.current.x,
-          position.current.z
+        groundSpeed = stepGroundRoll(
+          velocity.current,
+          surface,
+          delta
         )
+      }
 
-        onShotResult({
-          id: current.id,
-          carry: carryYards.current,
-          totalDistance: totalMeters * 1.09361,
-          lie: finalSurface,
-        })
+      const stopSpeed = current.kind === 'PUTT' ? 0.04 : 0.4
+
+      if (groundSpeed < stopSpeed) {
+        finishShot(current, false)
+        return
       }
     }
 
     if (ballRef.current) {
       ballRef.current.position.copy(position.current)
-      ballRef.current.rotation.x +=
-        velocity.current.z * dt * 0.08
-      ballRef.current.rotation.z -=
-        velocity.current.x * dt * 0.08
+      ballRef.current.rotation.x += velocity.current.z * delta * 0.08
+      ballRef.current.rotation.z -= velocity.current.x * delta * 0.08
     }
 
     setBallState(
@@ -470,13 +399,13 @@ function AnimatedGolfBall({
       velocity.current
     )
 
-    if (!rolling.current) {
+    if (current.kind === 'FULL' && !rolling.current) {
       const previous =
         tracerPoints.current[tracerPoints.current.length - 1]
 
       if (
         !previous ||
-        previous.distanceTo(position.current) > 0.9
+        previous.distanceTo(position.current) > 1.15
       ) {
         const next = position.current.clone()
         tracerPoints.current.push(next)
@@ -517,10 +446,7 @@ function createTracerSegment(
   start: THREE.Vector3,
   end: THREE.Vector3
 ) {
-  const direction = new THREE.Vector3().subVectors(
-    end,
-    start
-  )
+  const direction = new THREE.Vector3().subVectors(end, start)
   const length = direction.length()
   const midpoint = new THREE.Vector3()
     .addVectors(start, end)
@@ -529,22 +455,12 @@ function createTracerSegment(
   const group = new THREE.Group()
 
   const core = new THREE.Mesh(
-    new THREE.CylinderGeometry(
-      0.055,
-      0.055,
-      length,
-      7
-    ),
+    new THREE.CylinderGeometry(0.035, 0.035, length, 6),
     tracerCoreMaterial
   )
 
   const glow = new THREE.Mesh(
-    new THREE.CylinderGeometry(
-      0.12,
-      0.12,
-      length,
-      7
-    ),
+    new THREE.CylinderGeometry(0.075, 0.075, length, 6),
     tracerGlowMaterial
   )
 
