@@ -24,6 +24,7 @@ import type {
   ShotPosition,
   ShotResult,
 } from './types/shot'
+import { Scorecard } from './ui/Scorecard'
 
 const HOLE_PAR = plumasLakeHole1.par
 const HOLE_NUMBER = plumasLakeHole1.number
@@ -197,6 +198,8 @@ function App() {
           <strong>{strokes + penalties}</strong>
         </div>
       </section>
+
+      <Scorecard score={displayedScore} complete={holeComplete} />
 
       <section className="simulator">
         <div className="course-3d">
