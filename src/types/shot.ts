@@ -34,4 +34,6 @@ export type ShotResult = {
   lie?: SurfaceType
   finalPosition?: ShotPosition
   holed?: boolean
+  penaltyStrokes?: number
+  hazard?: Extract<SurfaceType, 'WATER' | 'OUT_OF_BOUNDS'>
 }

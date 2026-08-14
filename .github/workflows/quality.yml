@@ -2,10 +2,11 @@ name: GolfSim Quality
 
 on:
   pull_request:
-    branches: [main]
   push:
     branches:
       - milestone-phases3-10
+      - milestone-phases11-14
+      - milestone-gameplay-features
 
 jobs:
   quality:

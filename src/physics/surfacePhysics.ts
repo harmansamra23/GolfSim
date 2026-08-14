@@ -31,6 +31,19 @@ export function getSurfaceAtPosition(
   x: number,
   z: number
 ): SurfaceType {
+  for (const hazard of hole.hazards ?? []) {
+    if (insideEllipse(x, z, hazard)) {
+      return hazard.type
+    }
+  }
+
+  if (
+    hole.outOfBoundsHalfWidth != null &&
+    Math.abs(x) > hole.outOfBoundsHalfWidth
+  ) {
+    return 'OUT_OF_BOUNDS'
+  }
+
   const tee = hole.tee
 
   if (
@@ -129,6 +142,14 @@ export function getSurfacePhysics(
         bounce: 0.47,
         horizontalRetention: 0.88,
         rollingFriction: 0.991,
+      }
+
+    case 'WATER':
+    case 'OUT_OF_BOUNDS':
+      return {
+        bounce: 0,
+        horizontalRetention: 0,
+        rollingFriction: 0,
       }
   }
 }

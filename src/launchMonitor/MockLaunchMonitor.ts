@@ -10,22 +10,27 @@ function clamp(value: number, min: number, max: number) {
 
 export function createMockFullShot(
   remainingYards: number,
-  aimDirectionDeg: number
+  aimDirectionDeg: number,
+  clubCarryYards?: number
 ): LaunchMonitorShot {
+  const intendedYards = Math.max(
+    35,
+    Math.min(remainingYards, clubCarryYards ?? remainingYards)
+  )
   const ballSpeed = clamp(
-    58 + remainingYards * 0.36,
+    58 + intendedYards * 0.36,
     68,
     154
   )
 
   const launchAngle = clamp(
-    27 - remainingYards * 0.065,
+    27 - intendedYards * 0.065,
     11.5,
     24
   )
 
   const spinRate = clamp(
-    7600 - remainingYards * 21,
+    7600 - intendedYards * 21,
     2300,
     7200
   )
