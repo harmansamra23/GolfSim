@@ -2,12 +2,23 @@ import { useEffect, useMemo, useState } from 'react'
 
 import './App.css'
 
+import {
+  playHazardCue,
+  playHoleCompleteCue,
+  playShotCue,
+  playUiCue,
+} from './audio/SimulatorAudio'
 import type { BallPhase } from './ball/BallState'
 import type { CameraPreference } from './camera/CameraManager'
 import GolfScene from './components/simulator/GolfScene'
 import { loadCourse } from './course/CourseLoader'
-import type { GolfHole, SurfaceType } from './courses/courseTypes'
+import type {
+  GolfCourse,
+  GolfHole,
+  SurfaceType,
+} from './courses/courseTypes'
 import { drivingRangeHole } from './courses/drivingRange'
+import type { PlumasTeeId } from './courses/plumasLakeApprox'
 import {
   aimDirectionToTarget,
   defaultAimTarget,
@@ -52,7 +63,9 @@ import type {
   ShotPosition,
   ShotResult,
 } from './types/shot'
+import { HoleIntro } from './ui/HoleIntro'
 import { HoleMiniMap } from './ui/HoleMiniMap'
+import { RoundSetup } from './ui/RoundSetup'
 import { Scorecard } from './ui/Scorecard'
 
 type SimulatorMode = 'ROUND' | 'RANGE'
@@ -73,7 +86,14 @@ type LastShotSnapshot = {
   shot: ShotData | null
 }
 
-const course = loadCourse('golfsim-prototype-18')
+function teeIdFromSettings(settings: RoundSettings): PlumasTeeId {
+  return settings.tee.toLowerCase() as PlumasTeeId
+}
+
+const initialCourse = loadCourse(
+  DEFAULT_ROUND_SETTINGS.courseId,
+  teeIdFromSettings(DEFAULT_ROUND_SETTINGS)
+)
 
 function startPositionFor(hole: GolfHole): ShotPosition {
   return {
@@ -104,10 +124,24 @@ function initialAimFor(hole: GolfHole) {
   )
 }
 
+function courseStatusLabel(course: GolfCourse) {
+  if (course.geometryStatus === 'MAPPED_APPROX') {
+    return 'MAPPED APPROX'
+  }
+
+  if (course.geometryStatus === 'SURVEYED') {
+    return 'SURVEYED'
+  }
+
+  return 'PROTOTYPE'
+}
+
 function App() {
   const [mode, setMode] = useState<SimulatorMode>('ROUND')
-  const [round, setRound] = useState(() => createRound(course))
-  const roundHole = course.holes[round.currentHoleIndex]
+  const [course, setCourse] = useState<GolfCourse>(initialCourse)
+  const [round, setRound] = useState(() => createRound(initialCourse))
+  const roundHole =
+    course.holes[Math.min(round.currentHoleIndex, course.holes.length - 1)]
   const activeHole = mode === 'ROUND' ? roundHole : drivingRangeHole
 
   const [shot, setShot] = useState<ShotData | null>(null)
@@ -250,6 +284,7 @@ function App() {
   function switchMode(nextMode: SimulatorMode) {
     if (shotInProgress || nextMode === mode) return
 
+    playUiCue()
     setMode(nextMode)
     setShowRoundSetup(false)
     resetForHole(
@@ -258,10 +293,17 @@ function App() {
   }
 
   function startConfiguredRound() {
-    const freshRound = createRound(course)
+    const nextCourse = loadCourse(
+      roundSettings.courseId,
+      teeIdFromSettings(roundSettings)
+    )
+    const freshRound = createRound(nextCourse)
+
+    playUiCue()
+    setCourse(nextCourse)
     setRound(freshRound)
     setMode('ROUND')
-    resetForHole(course.holes[0])
+    resetForHole(nextCourse.holes[0])
     setShowRoundSetup(false)
   }
 
@@ -293,6 +335,7 @@ function App() {
             selectedClub.defaultCarryYards
           )
 
+    playShotCue()
     setShot(toSimulatorShot(monitorShot))
 
     if (mode === 'ROUND') {
@@ -310,6 +353,7 @@ function App() {
       return
     }
 
+    playHazardCue()
     setPenalties((value) => value + 1)
   }
 
@@ -340,6 +384,7 @@ function App() {
     }
 
     if (result.penaltyStrokes) {
+      playHazardCue()
       setPenalties((value) => value + result.penaltyStrokes!)
       setLastHazard(
         result.hazard === 'WATER'
@@ -387,6 +432,7 @@ function App() {
       status: 'PLAYED',
     }
 
+    playHoleCompleteCue()
     setHoleComplete(true)
     setRemainingYards(0)
     setCompletedScore(completed)
@@ -404,6 +450,7 @@ function App() {
       return
     }
 
+    playUiCue()
     setShot(lastShotSnapshot.shot)
     setBallPosition({ ...lastShotSnapshot.position })
     setResetPosition({ ...lastShotSnapshot.position })
@@ -463,6 +510,7 @@ function App() {
       setPenalties(0)
     }
 
+    playHoleCompleteCue()
     setHoleComplete(true)
     setCompletedScore(skippedScore)
     setRound((current) =>
@@ -476,17 +524,20 @@ function App() {
     const nextRound = advanceRound(round, course)
     const nextHoleData = course.holes[nextRound.currentHoleIndex]
 
+    playUiCue()
     setRound(nextRound)
     resetForHole(nextHoleData)
   }
 
   function resetCurrentHole() {
     if (shotInProgress) return
+    playUiCue()
     resetForHole(activeHole)
   }
 
   function resetRound() {
     if (shotInProgress) return
+    playUiCue()
     setShowRoundSetup(true)
   }
 
@@ -512,6 +563,11 @@ function App() {
         </div>
 
         <div className="header-actions">
+          {mode === 'ROUND' ? (
+            <div className="course-status-chip">
+              {courseStatusLabel(course)}
+            </div>
+          ) : null}
           <button
             className={`mode-chip ${mode === 'ROUND' ? 'mode-chip-active' : ''}`}
             onClick={() => switchMode('ROUND')}
@@ -565,7 +621,7 @@ function App() {
       <section className="simulator">
         <div className="course-3d">
           <GolfScene
-            key={`${mode}-${activeHole.number}`}
+            key={`${course.id}-${mode}-${activeHole.number}`}
             hole={activeHole}
             shot={shot}
             aimTarget={aimTarget}
@@ -575,6 +631,10 @@ function App() {
             onBallPhaseChange={setBallPhase}
             onShotResult={handleShotResult}
           />
+
+          {mode === 'ROUND' && !showRoundSetup ? (
+            <HoleIntro course={course} hole={activeHole} />
+          ) : null}
 
           <div className="course-hud course-hud-top-left">
             {mode === 'ROUND' ? (
@@ -700,7 +760,10 @@ function App() {
           >
             <span>CLUB</span>
             <strong>{selectedClub.name}</strong>
-            <small>{selectedClub.defaultCarryYards || 'PUTT'} {selectedClub.defaultCarryYards ? 'YD AVG' : ''}</small>
+            <small>
+              {selectedClub.defaultCarryYards || 'PUTT'}{' '}
+              {selectedClub.defaultCarryYards ? 'YD AVG' : ''}
+            </small>
           </button>
 
           {clubMenuOpen ? (
@@ -708,15 +771,24 @@ function App() {
               {DEFAULT_BAG.map((club) => (
                 <button
                   key={club.id}
-                  className={club.id === selectedClubId ? 'club-option club-option-active' : 'club-option'}
+                  className={
+                    club.id === selectedClubId
+                      ? 'club-option club-option-active'
+                      : 'club-option'
+                  }
                   onClick={() => {
+                    playUiCue()
                     setSelectedClubId(club.id)
                     setClubMenuOpen(false)
                   }}
                 >
                   <span>{club.shortName}</span>
                   <strong>{club.name}</strong>
-                  <small>{club.category === 'PUTTER' ? 'PUTTER' : `${club.defaultCarryYards} YD`}</small>
+                  <small>
+                    {club.category === 'PUTTER'
+                      ? 'PUTTER'
+                      : `${club.defaultCarryYards} YD`}
+                  </small>
                 </button>
               ))}
             </div>
@@ -836,6 +908,13 @@ function App() {
             </button>
           ) : null}
 
+          {mode === 'ROUND' && course.sourceNote ? (
+            <div className="course-source-note">
+              <span>COURSE DATA</span>
+              <small>{course.sourceNote}</small>
+            </div>
+          ) : null}
+
           {mode === 'ROUND' && round.complete ? (
             <div className="round-finish-card">
               <span>FINAL</span>
@@ -882,147 +961,6 @@ function HudMetric({
     <div className="hud-metric">
       <span>{label}</span>
       <strong>{value}</strong>
-    </div>
-  )
-}
-
-function RoundSetup({
-  settings,
-  onChange,
-  onStart,
-  onClose,
-}: {
-  settings: RoundSettings
-  onChange: (settings: RoundSettings) => void
-  onStart: () => void
-  onClose: () => void
-}) {
-  return (
-    <div className="round-setup-backdrop">
-      <section className="round-setup-panel">
-        <div className="round-setup-title">
-          <div>
-            <span>ROUND SETUP</span>
-            <h2>{course.name}</h2>
-          </div>
-          <button onClick={onClose}>×</button>
-        </div>
-
-        <div className="round-setup-grid">
-          <label>
-            <span>PLAYER</span>
-            <input
-              value={settings.playerName}
-              onChange={(event) =>
-                onChange({ ...settings, playerName: event.target.value })
-              }
-            />
-          </label>
-
-          <label>
-            <span>TEES</span>
-            <select
-              value={settings.tee}
-              onChange={(event) =>
-                onChange({
-                  ...settings,
-                  tee: event.target.value as RoundSettings['tee'],
-                })
-              }
-            >
-              <option>BLACK</option>
-              <option>BLUE</option>
-              <option>WHITE</option>
-              <option>GOLD</option>
-              <option>RED</option>
-            </select>
-          </label>
-
-          <label>
-            <span>PIN</span>
-            <select
-              value={settings.pinDifficulty}
-              onChange={(event) =>
-                onChange({
-                  ...settings,
-                  pinDifficulty: event.target.value as RoundSettings['pinDifficulty'],
-                })
-              }
-            >
-              <option>EASY</option>
-              <option>MEDIUM</option>
-              <option>HARD</option>
-              <option>RANDOM</option>
-            </select>
-          </label>
-
-          <label>
-            <span>WIND</span>
-            <select
-              value={settings.wind}
-              onChange={(event) =>
-                onChange({
-                  ...settings,
-                  wind: event.target.value as RoundSettings['wind'],
-                })
-              }
-            >
-              <option>CALM</option>
-              <option>REALISTIC</option>
-              <option>RANDOM</option>
-            </select>
-          </label>
-
-          <label>
-            <span>PUTTING</span>
-            <select
-              value={settings.putting}
-              onChange={(event) =>
-                onChange({
-                  ...settings,
-                  putting: event.target.value as RoundSettings['putting'],
-                })
-              }
-            >
-              <option value="ENABLED">ENABLED</option>
-              <option value="AUTO_PUTT">AUTO PUTT</option>
-              <option value="GIMME">GIMME</option>
-            </select>
-          </label>
-
-          <label>
-            <span>GIMME</span>
-            <select
-              value={settings.gimmeFeet}
-              onChange={(event) =>
-                onChange({
-                  ...settings,
-                  gimmeFeet: Number(event.target.value),
-                })
-              }
-            >
-              {[3, 5, 6, 8, 10].map((feet) => (
-                <option key={feet} value={feet}>{feet} FT</option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <label className="round-toggle">
-          <input
-            type="checkbox"
-            checked={settings.mulligans}
-            onChange={(event) =>
-              onChange({ ...settings, mulligans: event.target.checked })
-            }
-          />
-          <span>ALLOW MULLIGANS</span>
-        </label>
-
-        <button className="primary-action" onClick={onStart}>
-          START ROUND
-        </button>
-      </section>
     </div>
   )
 }
