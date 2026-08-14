@@ -104,45 +104,48 @@ function GolfScene({
       shadows
       dpr={[1, 2]}
       camera={{
-        position: [initialPosition.x, 1.75, initialPosition.z + 14],
-        fov: 50,
+        position: [initialPosition.x, 1.95, initialPosition.z + 16],
+        fov: 60,
         near: 0.1,
         far: 1400,
       }}
       gl={{
         antialias: true,
         toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 1.08,
+        toneMappingExposure: 0.9,
       }}
     >
-      <color attach="background" args={['#8ebbd7']} />
-      <fog attach="fog" args={['#8ebbd7', 300, 900]} />
+      <color attach="background" args={['#d67d5b']} />
+      <fog attach="fog" args={['#c98367', 185, 940]} />
 
       <Sky
         distance={450000}
-        sunPosition={[70, 38, 30]}
-        turbidity={5}
-        rayleigh={1.35}
+        sunPosition={[-120, 10, -160]}
+        turbidity={10}
+        rayleigh={1.05}
+        mieCoefficient={0.018}
+        mieDirectionalG={0.9}
       />
 
-      <ambientLight intensity={0.16} />
+      <ambientLight intensity={0.11} color="#e7b39a" />
       <hemisphereLight
-        intensity={0.82}
-        color="#eef8ff"
-        groundColor="#244528"
+        intensity={0.72}
+        color="#ffd8bd"
+        groundColor="#49382b"
       />
       <directionalLight
-        position={[58, 86, 34]}
-        intensity={3}
+        position={[-120, 34, -90]}
+        intensity={2.15}
+        color="#ffad69"
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
-        shadow-camera-left={-95}
-        shadow-camera-right={95}
-        shadow-camera-top={95}
-        shadow-camera-bottom={-95}
+        shadow-camera-left={-120}
+        shadow-camera-right={120}
+        shadow-camera-top={120}
+        shadow-camera-bottom={-120}
         shadow-camera-near={1}
-        shadow-camera-far={300}
+        shadow-camera-far={360}
         shadow-bias={-0.0002}
       />
 
