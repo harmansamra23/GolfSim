@@ -4,26 +4,26 @@ import { useRef, type ComponentRef } from 'react'
 import * as THREE from 'three'
 
 import type { BallStateReader } from '../ball/BallState'
-import {
-  fairwayCenterX,
-  plumasLakeHole1,
-} from '../courses/plumasLakeHole1'
+import type { GolfHole } from '../courses/courseTypes'
 
 export type CameraPreference = 'AUTO' | 'FREE'
 
 type CameraManagerProps = {
   getBallState: BallStateReader
   preference: CameraPreference
+  hole: GolfHole
 }
 
 export function CameraManager({
   getBallState,
   preference,
+  hole,
 }: CameraManagerProps) {
   const { camera } = useThree()
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
   const desiredPosition = useRef(new THREE.Vector3())
   const desiredTarget = useRef(new THREE.Vector3())
+  const awayFromFlag = useRef(new THREE.Vector3())
 
   useFrame((_, delta) => {
     const state = getBallState()
@@ -42,56 +42,55 @@ export function CameraManager({
 
     if (freeEnabled) return
 
+    // AUTO camera always faces the flag. The camera can move with the ball,
+    // but the pin remains the visual anchor throughout the entire shot.
+    desiredTarget.current.set(
+      hole.green.center.x,
+      1,
+      hole.green.center.z
+    )
+
+    awayFromFlag.current.set(
+      ball.x - hole.green.center.x,
+      0,
+      ball.z - hole.green.center.z
+    )
+
+    if (awayFromFlag.current.lengthSq() < 0.0001) {
+      awayFromFlag.current.set(0, 0, 1)
+    } else {
+      awayFromFlag.current.normalize()
+    }
+
     if (state.phase === 'ADDRESS') {
       desiredPosition.current.set(
-        plumasLakeHole1.tee.x,
+        ball.x + awayFromFlag.current.x * 10,
         1.8,
-        plumasLakeHole1.tee.z + 10
-      )
-      desiredTarget.current.set(
-        fairwayCenterX(-80),
-        1,
-        -80
+        ball.z + awayFromFlag.current.z * 10
       )
     } else if (state.phase === 'FLIGHT') {
       desiredPosition.current.set(
-        ball.x,
+        ball.x + awayFromFlag.current.x * 12,
         ball.y + 5.5,
-        ball.z + 12
-      )
-      desiredTarget.current.set(
-        ball.x,
-        ball.y + 1,
-        ball.z - 10
+        ball.z + awayFromFlag.current.z * 12
       )
     } else if (state.phase === 'LANDING') {
       desiredPosition.current.set(
-        ball.x + 7,
+        ball.x + awayFromFlag.current.x * 13,
         ball.y + 5,
-        ball.z + 13
+        ball.z + awayFromFlag.current.z * 13
       )
-      desiredTarget.current.copy(ball)
     } else if (state.phase === 'ROLLING') {
       desiredPosition.current.set(
-        ball.x + 6,
+        ball.x + awayFromFlag.current.x * 10,
         4,
-        ball.z + 10
-      )
-      desiredTarget.current.set(
-        ball.x,
-        0.3,
-        ball.z
+        ball.z + awayFromFlag.current.z * 10
       )
     } else {
       desiredPosition.current.set(
-        ball.x + 7,
+        ball.x + awayFromFlag.current.x * 10,
         4.5,
-        ball.z + 10
-      )
-      desiredTarget.current.set(
-        ball.x,
-        0.3,
-        ball.z
+        ball.z + awayFromFlag.current.z * 10
       )
     }
 

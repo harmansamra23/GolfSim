@@ -1,47 +1,76 @@
+import type { GolfCourse } from '../courses/courseTypes'
 import {
-  scoreLabel,
-  scoreToPar,
+  isSkippedScore,
+  roundTotalToPar,
   type HoleScore,
 } from '../gameplay/ScoreManager'
 
-type ScorecardProps = {
-  score: HoleScore
-  complete: boolean
-}
-
 export function Scorecard({
-  score,
-  complete,
-}: ScorecardProps) {
-  const relative = scoreToPar(score)
+  course,
+  scores,
+  currentHole,
+}: {
+  course: GolfCourse
+  scores: HoleScore[]
+  currentHole: number
+}) {
+  const scoreByHole = new Map(
+    scores.map((score) => [score.hole, score])
+  )
+  const totalToPar = roundTotalToPar(scores)
+  const countedStrokes = scores.reduce(
+    (total, score) =>
+      isSkippedScore(score)
+        ? total
+        : total + score.strokes + score.penalties,
+    0
+  )
 
   return (
-    <section className="scorecard">
-      <div>
-        <span>HOLE</span>
-        <strong>{score.hole}</strong>
+    <section className="round-scorecard">
+      <div className="scorecard-row scorecard-header-row">
+        <span className="scorecard-label">HOLE</span>
+        {course.holes.map((hole) => (
+          <span
+            key={hole.number}
+            className={hole.number === currentHole ? 'active-hole-cell' : ''}
+          >
+            {hole.number}
+          </span>
+        ))}
+        <span className="scorecard-total">TOT</span>
       </div>
 
-      <div>
-        <span>PAR</span>
-        <strong>{score.par}</strong>
+      <div className="scorecard-row">
+        <span className="scorecard-label">PAR</span>
+        {course.holes.map((hole) => (
+          <span key={hole.number}>{hole.par}</span>
+        ))}
+        <span className="scorecard-total">
+          {course.holes.reduce((total, hole) => total + hole.par, 0)}
+        </span>
       </div>
 
-      <div>
-        <span>STROKES</span>
-        <strong>{score.strokes}</strong>
+      <div className="scorecard-row">
+        <span className="scorecard-label">SCORE</span>
+        {course.holes.map((hole) => {
+          const score = scoreByHole.get(hole.number)
+
+          return (
+            <span key={hole.number}>
+              {!score
+                ? '–'
+                : isSkippedScore(score)
+                  ? 'N/A'
+                  : score.strokes + score.penalties}
+            </span>
+          )
+        })}
+        <span className="scorecard-total">{countedStrokes}</span>
       </div>
 
-      <div>
-        <span>PEN</span>
-        <strong>{score.penalties}</strong>
-      </div>
-
-      <div>
-        <span>RESULT</span>
-        <strong>
-          {complete ? scoreLabel(relative) : 'IN PLAY'}
-        </strong>
+      <div className="round-to-par">
+        ROUND {totalToPar > 0 ? `+${totalToPar}` : totalToPar}
       </div>
     </section>
   )

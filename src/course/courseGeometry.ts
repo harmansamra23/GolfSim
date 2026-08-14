@@ -1,27 +1,29 @@
 import * as THREE from 'three'
 
+import type { GolfHole } from '../courses/courseTypes'
 import {
-  FAIRWAY_END_Z,
-  FAIRWAY_START_Z,
   cartPathCenterX,
   fairwayCenterX,
   fairwayHalfWidth,
-} from '../courses/plumasLakeHole1'
+} from '../courses/holeGeometryMath'
 
-export function createCourseShape(extraWidth: number) {
+export function createCourseShape(
+  hole: GolfHole,
+  extraWidth: number
+) {
   const shape = new THREE.Shape()
   const steps = 60
 
   for (let i = 0; i <= steps; i++) {
     const t = i / steps
     const z = THREE.MathUtils.lerp(
-      FAIRWAY_START_Z,
-      FAIRWAY_END_Z,
+      hole.fairway.startZ,
+      hole.fairway.endZ,
       t
     )
     const x =
-      fairwayCenterX(z) -
-      fairwayHalfWidth(z) -
+      fairwayCenterX(hole, z) -
+      fairwayHalfWidth(hole, z) -
       extraWidth
 
     if (i === 0) {
@@ -34,13 +36,13 @@ export function createCourseShape(extraWidth: number) {
   for (let i = steps; i >= 0; i--) {
     const t = i / steps
     const z = THREE.MathUtils.lerp(
-      FAIRWAY_START_Z,
-      FAIRWAY_END_Z,
+      hole.fairway.startZ,
+      hole.fairway.endZ,
       t
     )
     const x =
-      fairwayCenterX(z) +
-      fairwayHalfWidth(z) +
+      fairwayCenterX(hole, z) +
+      fairwayHalfWidth(hole, z) +
       extraWidth
 
     shape.lineTo(x, z)
@@ -50,19 +52,23 @@ export function createCourseShape(extraWidth: number) {
   return shape
 }
 
-export function createCartPathShape() {
+export function createCartPathShape(hole: GolfHole) {
+  if (!hole.cartPath) {
+    return null
+  }
+
   const shape = new THREE.Shape()
   const steps = 60
-  const halfWidth = 1.35
+  const halfWidth = hole.cartPath.halfWidth
 
   for (let i = 0; i <= steps; i++) {
     const t = i / steps
     const z = THREE.MathUtils.lerp(
-      FAIRWAY_START_Z,
-      FAIRWAY_END_Z,
+      hole.fairway.startZ,
+      hole.fairway.endZ,
       t
     )
-    const x = cartPathCenterX(z) - halfWidth
+    const x = cartPathCenterX(hole, z) - halfWidth
 
     if (i === 0) {
       shape.moveTo(x, z)
@@ -74,13 +80,13 @@ export function createCartPathShape() {
   for (let i = steps; i >= 0; i--) {
     const t = i / steps
     const z = THREE.MathUtils.lerp(
-      FAIRWAY_START_Z,
-      FAIRWAY_END_Z,
+      hole.fairway.startZ,
+      hole.fairway.endZ,
       t
     )
 
     shape.lineTo(
-      cartPathCenterX(z) + halfWidth,
+      cartPathCenterX(hole, z) + halfWidth,
       z
     )
   }

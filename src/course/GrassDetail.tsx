@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 
+import type { GolfHole } from '../courses/courseTypes'
 import { getSurfaceAtPosition } from '../physics/surfacePhysics'
 
 const PATCH_RADIUS = 32
@@ -28,26 +29,18 @@ type LayerSettings = {
   density: number
 }
 
-export function GrassDetail() {
+export function GrassDetail({ hole }: { hole: GolfHole }) {
   const { camera } = useThree()
-
   const roughRef = useRef<THREE.InstancedMesh>(null)
   const firstCutRef = useRef<THREE.InstancedMesh>(null)
   const fairwayRef = useRef<THREE.InstancedMesh>(null)
-
   const lastPatchCenter = useRef(
     new THREE.Vector2(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY)
   )
-
   const dummy = useRef(new THREE.Object3D())
 
   useEffect(() => {
-    const meshes = [
-      roughRef.current,
-      firstCutRef.current,
-      fairwayRef.current,
-    ]
-
+    const meshes = [roughRef.current, firstCutRef.current, fairwayRef.current]
     for (const mesh of meshes) {
       mesh?.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
     }
@@ -64,7 +57,6 @@ export function GrassDetail() {
       maxWidth: 0.06,
       density: 0.92,
     }
-
     const firstCut: LayerSettings = {
       mesh: firstCutRef.current,
       capacity: FIRST_CUT_CAPACITY,
@@ -75,7 +67,6 @@ export function GrassDetail() {
       maxWidth: 0.042,
       density: 0.68,
     }
-
     const fairway: LayerSettings = {
       mesh: fairwayRef.current,
       capacity: FAIRWAY_CAPACITY,
@@ -87,25 +78,19 @@ export function GrassDetail() {
       density: 0.38,
     }
 
-    const counts = {
-      rough: 0,
-      firstCut: 0,
-      fairway: 0,
-    }
-
+    const counts = { rough: 0, firstCut: 0, fairway: 0 }
     const patchSeed =
       Math.round(centerX / REFRESH_DISTANCE) * 92821 +
-      Math.round(centerZ / REFRESH_DISTANCE) * 68917
+      Math.round(centerZ / REFRESH_DISTANCE) * 68917 +
+      hole.number * 101
 
     for (let i = 0; i < SAMPLE_COUNT; i++) {
       const randomX = seededRandom(patchSeed + i * 4 + 1)
       const randomZ = seededRandom(patchSeed + i * 4 + 2)
       const densityRoll = seededRandom(patchSeed + i * 4 + 3)
       const variation = seededRandom(patchSeed + i * 4 + 4)
-
       const x = centerX + (randomX * 2 - 1) * PATCH_RADIUS
       const z = centerZ + (randomZ * 2 - 1) * PATCH_RADIUS
-
       const dx = x - centerX
       const dz = z - centerZ
       const distance = Math.sqrt(dx * dx + dz * dz)
@@ -117,11 +102,9 @@ export function GrassDetail() {
         0,
         1
       )
-
       if (edgeFade <= 0.04) continue
 
-      const surface = getSurfaceAtPosition(x, z)
-
+      const surface = getSurfaceAtPosition(hole, x, z)
       let layer: LayerSettings | null = null
       let countKey: keyof typeof counts | null = null
 
@@ -145,29 +128,18 @@ export function GrassDetail() {
         layer.maxHeight,
         variation
       ) * edgeFade
-
       const width = THREE.MathUtils.lerp(
         layer.minWidth,
         layer.maxWidth,
         seededRandom(patchSeed + i * 7 + 11)
       )
-
       const rotation = seededRandom(patchSeed + i * 5 + 19) * Math.PI
 
-      dummy.current.position.set(
-        x,
-        layer.baseY + height * 0.5,
-        z
-      )
+      dummy.current.position.set(x, layer.baseY + height * 0.5, z)
       dummy.current.rotation.set(0, rotation, 0)
       dummy.current.scale.set(width, height, 1)
       dummy.current.updateMatrix()
-
-      layer.mesh.setMatrixAt(
-        counts[countKey],
-        dummy.current.matrix
-      )
-
+      layer.mesh.setMatrixAt(counts[countKey], dummy.current.matrix)
       counts[countKey] += 1
     }
 
@@ -185,11 +157,8 @@ export function GrassDetail() {
   }
 
   useFrame(() => {
-    const centerX =
-      Math.round(camera.position.x / REFRESH_DISTANCE) * REFRESH_DISTANCE
-    const centerZ =
-      Math.round(camera.position.z / REFRESH_DISTANCE) * REFRESH_DISTANCE
-
+    const centerX = Math.round(camera.position.x / REFRESH_DISTANCE) * REFRESH_DISTANCE
+    const centerZ = Math.round(camera.position.z / REFRESH_DISTANCE) * REFRESH_DISTANCE
     const nextCenter = new THREE.Vector2(centerX, centerZ)
 
     if (

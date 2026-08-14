@@ -1,16 +1,12 @@
 import { courseMaterials } from '../components/simulator/CourseMaterials'
-import { plumasLakeHole1 } from '../courses/plumasLakeHole1'
+import type { GolfHole } from '../courses/courseTypes'
 
-export function TeeBox() {
+export function TeeBox({ hole }: { hole: GolfHole }) {
   return (
     <>
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[
-          plumasLakeHole1.tee.x,
-          0.055,
-          plumasLakeHole1.tee.z,
-        ]}
+        position={[hole.tee.x, 0.055, hole.tee.z]}
         receiveShadow
       >
         <planeGeometry args={[11, 8]} />
@@ -22,19 +18,25 @@ export function TeeBox() {
         />
       </mesh>
 
-      <TeeMarker x={-1.5} />
-      <TeeMarker x={1.5} />
+      <TeeMarker hole={hole} x={-1.5} />
+      <TeeMarker hole={hole} x={1.5} />
     </>
   )
 }
 
-function TeeMarker({ x }: { x: number }) {
+function TeeMarker({
+  hole,
+  x,
+}: {
+  hole: GolfHole
+  x: number
+}) {
   return (
     <mesh
       position={[
-        plumasLakeHole1.tee.x + x,
+        hole.tee.x + x,
         0.22,
-        plumasLakeHole1.tee.z,
+        hole.tee.z,
       ]}
       castShadow
     >

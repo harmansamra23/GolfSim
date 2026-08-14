@@ -1,13 +1,13 @@
 import { Vector2 } from 'three'
 
 import { courseMaterials } from '../components/simulator/CourseMaterials'
-import { plumasLakeHole1 } from '../courses/plumasLakeHole1'
+import type { GolfHole } from '../courses/courseTypes'
 
 const fringeNormalScale = new Vector2(0.95, 0.95)
 const greenNormalScale = new Vector2(0.28, 0.28)
 
-export function Green() {
-  const green = plumasLakeHole1.green
+export function Green({ hole }: { hole: GolfHole }) {
+  const green = hole.green
 
   return (
     <>
