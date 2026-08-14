@@ -1,4 +1,4 @@
-import { Html, Sky } from '@react-three/drei'
+import { Sky } from '@react-three/drei'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import * as THREE from 'three'
@@ -14,6 +14,7 @@ import {
   type CameraPreference,
 } from '../../camera/CameraManager'
 import { CourseHole } from '../../course/CourseHole'
+import { PinDistanceHud } from '../../course/PinDistanceHud'
 import type { GolfHole } from '../../courses/courseTypes'
 import {
   BALL_FLIGHT_STEP_SECONDS,
@@ -128,7 +129,7 @@ function GolfScene({
       />
 
       <CourseHole hole={hole} />
-      <PinDistanceMarker hole={hole} getBallState={getBallState} />
+      <PinDistanceHud hole={hole} getBallState={getBallState} />
 
       <AnimatedGolfBall
         hole={hole}
@@ -145,81 +146,6 @@ function GolfScene({
         preference={cameraPreference}
       />
     </Canvas>
-  )
-}
-
-function PinDistanceMarker({
-  hole,
-  getBallState,
-}: {
-  hole: GolfHole
-  getBallState: BallStateReader
-}) {
-  const textRef = useRef<HTMLSpanElement>(null)
-  const lastRoundedYards = useRef(-1)
-
-  useFrame(() => {
-    const ball = getBallState().position
-    const yards = Math.round(
-      metersToYards(
-        Math.hypot(
-          hole.green.center.x - ball.x,
-          hole.green.center.z - ball.z
-        )
-      )
-    )
-
-    if (yards === lastRoundedYards.current) return
-    lastRoundedYards.current = yards
-
-    if (textRef.current) {
-      textRef.current.textContent = `${yards} YDS`
-    }
-  })
-
-  const initialYards = Math.round(
-    metersToYards(
-      Math.hypot(
-        hole.green.center.x - hole.tee.x,
-        hole.green.center.z - hole.tee.z
-      )
-    )
-  )
-
-  return (
-    <Html
-      position={[
-        hole.green.center.x,
-        7.2,
-        hole.green.center.z,
-      ]}
-      center
-      distanceFactor={12}
-      zIndexRange={[20, 0]}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '6px 10px',
-          borderRadius: '999px',
-          background: 'rgba(8, 18, 13, 0.88)',
-          border: '1px solid rgba(255,255,255,0.28)',
-          color: '#ffffff',
-          fontFamily: 'system-ui, sans-serif',
-          fontSize: '12px',
-          fontWeight: 700,
-          letterSpacing: '0.04em',
-          whiteSpace: 'nowrap',
-          pointerEvents: 'none',
-          boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
-        }}
-      >
-        <span aria-hidden="true">⛳</span>
-        <span ref={textRef}>{initialYards} YDS</span>
-      </div>
-    </Html>
   )
 }
 
