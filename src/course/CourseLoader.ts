@@ -1,4 +1,8 @@
 import type { GolfCourse, GolfHole, HazardZone } from '../courses/courseTypes'
+import {
+  createPlumasLakeCourse,
+  type PlumasTeeId,
+} from '../courses/plumasLakeApprox'
 import { prototype18Course } from '../courses/prototype18'
 
 function prototypeHazards(hole: GolfHole): HazardZone[] {
@@ -40,6 +44,8 @@ function prototypeHazards(hole: GolfHole): HazardZone[] {
 function enrichPrototypeCourse(course: GolfCourse): GolfCourse {
   return {
     ...course,
+    geometryStatus: 'PROTOTYPE',
+    sourceNote: 'GolfSim development course. Not based on a real golf course.',
     holes: course.holes.map((hole) => ({
       ...hole,
       hazards: prototypeHazards(hole),
@@ -48,26 +54,45 @@ function enrichPrototypeCourse(course: GolfCourse): GolfCourse {
         xPercent: ((hole.number % 5) - 2) * 0.32,
         zPercent: ((hole.number % 4) - 1.5) * 0.24,
       },
+      environmentStyle: 'GENERIC' as const,
     })),
   }
 }
 
 const playablePrototype = enrichPrototypeCourse(prototype18Course)
 
-const COURSE_REGISTRY: Record<string, GolfCourse> = {
-  [playablePrototype.id]: playablePrototype,
-}
+export type CourseSelection =
+  | 'plumas-lake'
+  | 'golfsim-prototype-18'
 
 export function listCourses() {
-  return Object.values(COURSE_REGISTRY)
+  return [
+    {
+      id: 'plumas-lake' as const,
+      name: 'Plumas Lake Golf Club',
+      location: 'Olivehurst, California',
+      geometryStatus: 'MAPPED_APPROX' as const,
+    },
+    {
+      id: playablePrototype.id as CourseSelection,
+      name: playablePrototype.name,
+      location: playablePrototype.location,
+      geometryStatus: 'PROTOTYPE' as const,
+    },
+  ]
 }
 
-export function loadCourse(courseId: string) {
-  const course = COURSE_REGISTRY[courseId]
-
-  if (!course) {
-    throw new Error(`Unknown course: ${courseId}`)
+export function loadCourse(
+  courseId: CourseSelection,
+  tee: PlumasTeeId = 'blue'
+): GolfCourse {
+  if (courseId === 'plumas-lake') {
+    return createPlumasLakeCourse(tee)
   }
 
-  return course
+  if (courseId === playablePrototype.id) {
+    return playablePrototype
+  }
+
+  throw new Error(`Unknown course: ${courseId}`)
 }
