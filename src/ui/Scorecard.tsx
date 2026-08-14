@@ -1,5 +1,6 @@
 import type { GolfCourse } from '../courses/courseTypes'
 import {
+  isSkippedScore,
   roundTotalToPar,
   type HoleScore,
 } from '../gameplay/ScoreManager'
@@ -17,6 +18,13 @@ export function Scorecard({
     scores.map((score) => [score.hole, score])
   )
   const totalToPar = roundTotalToPar(scores)
+  const countedStrokes = scores.reduce(
+    (total, score) =>
+      isSkippedScore(score)
+        ? total
+        : total + score.strokes + score.penalties,
+    0
+  )
 
   return (
     <section className="round-scorecard">
@@ -47,18 +55,18 @@ export function Scorecard({
         <span className="scorecard-label">SCORE</span>
         {course.holes.map((hole) => {
           const score = scoreByHole.get(hole.number)
+
           return (
             <span key={hole.number}>
-              {score ? score.strokes + score.penalties : '–'}
+              {!score
+                ? '–'
+                : isSkippedScore(score)
+                  ? 'N/A'
+                  : score.strokes + score.penalties}
             </span>
           )
         })}
-        <span className="scorecard-total">
-          {scores.reduce(
-            (total, score) => total + score.strokes + score.penalties,
-            0
-          )}
-        </span>
+        <span className="scorecard-total">{countedStrokes}</span>
       </div>
 
       <div className="round-to-par">
