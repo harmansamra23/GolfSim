@@ -20,6 +20,8 @@ import {
   totalStrokes,
 } from './gameplay/RoundManager'
 import {
+  isSkippedScore,
+  maxStrokesForPar,
   roundTotalToPar,
   scoreLabel,
   scoreToPar,
@@ -216,6 +218,7 @@ function App() {
         par: activeHole.par,
         strokes,
         penalties,
+        status: 'PLAYED',
       }
 
       setHoleComplete(true)
@@ -227,8 +230,48 @@ function App() {
     }
   }
 
+  function skipHole() {
+    if (
+      mode !== 'ROUND' ||
+      holeComplete ||
+      round.complete ||
+      shotInProgress
+    ) {
+      return
+    }
+
+    const noShotTaken = strokes === 0 && penalties === 0
+    const maxScore = maxStrokesForPar(activeHole.par)
+    const skippedScore: HoleScore = noShotTaken
+      ? {
+          hole: activeHole.number,
+          par: activeHole.par,
+          strokes: 0,
+          penalties: 0,
+          status: 'SKIPPED',
+        }
+      : {
+          hole: activeHole.number,
+          par: activeHole.par,
+          strokes: maxScore,
+          penalties: 0,
+          status: 'MAX',
+        }
+
+    if (!noShotTaken) {
+      setStrokes(maxScore)
+      setPenalties(0)
+    }
+
+    setHoleComplete(true)
+    setCompletedScore(skippedScore)
+    setRound((current) =>
+      saveHoleScore(current, skippedScore, course)
+    )
+  }
+
   function nextHole() {
-    if (shotInProgress || round.complete) return
+    if (shotInProgress || round.complete || !holeComplete) return
 
     const nextRound = advanceRound(round, course)
     const nextHoleData = course.holes[nextRound.currentHoleIndex]
@@ -256,6 +299,7 @@ function App() {
     par: activeHole.par,
     strokes,
     penalties,
+    status: 'PLAYED',
   }
 
   const displayedScore = completedScore ?? liveScore
@@ -267,6 +311,14 @@ function App() {
     round.currentHoleIndex < course.holes.length - 1
   const showScorecard =
     mode === 'ROUND' && (holeComplete || round.complete)
+
+  const completionSummary = completedScore
+    ? isSkippedScore(completedScore)
+      ? 'SKIPPED · N/A'
+      : completedScore.status === 'MAX'
+        ? `MAX SCORE · ${completedScore.strokes}`
+        : `${scoreLabel(relativeToPar)} · ${completedScore.strokes + completedScore.penalties}`
+    : `${scoreLabel(relativeToPar)} · ${strokes + penalties}`
 
   return (
     <main className="app">
@@ -307,9 +359,7 @@ function App() {
           <div className="scorecard-reveal-heading">
             <div>
               <span>HOLE {activeHole.number} COMPLETE</span>
-              <strong>
-                {scoreLabel(relativeToPar)} · {strokes + penalties}
-              </strong>
+              <strong>{completionSummary}</strong>
             </div>
             <div>
               <span>ROUND</span>
@@ -399,7 +449,7 @@ function App() {
             <strong>
               {mode === 'ROUND'
                 ? holeComplete
-                  ? `${scoreLabel(relativeToPar)} · ${strokes + penalties}`
+                  ? completionSummary
                   : `Hole ${activeHole.number}`
                 : 'Range'}
             </strong>
@@ -418,10 +468,10 @@ function App() {
               : 'TEST SHOT'}
           </button>
 
-          {hasNextHole ? (
+          {mode === 'ROUND' && !round.complete ? (
             <button
               className={holeComplete ? 'primary-action' : 'secondary-action'}
-              onClick={nextHole}
+              onClick={holeComplete ? nextHole : skipHole}
               disabled={shotInProgress}
             >
               {holeComplete ? 'NEXT HOLE' : 'SKIP HOLE'}
