@@ -1,11 +1,23 @@
+export type HoleScoreStatus = 'PLAYED' | 'MAX' | 'SKIPPED'
+
 export type HoleScore = {
   hole: number
   par: number
   strokes: number
   penalties: number
+  status?: HoleScoreStatus
+}
+
+export function maxStrokesForPar(par: number) {
+  return par * 2
+}
+
+export function isSkippedScore(score: HoleScore) {
+  return score.status === 'SKIPPED'
 }
 
 export function scoreToPar(score: HoleScore) {
+  if (isSkippedScore(score)) return 0
   return score.strokes + score.penalties - score.par
 }
 
