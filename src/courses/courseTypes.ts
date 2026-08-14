@@ -56,6 +56,15 @@ export type CartPathDefinition = {
   waveCycles: number
 }
 
+export type CourseEnvironmentStyle =
+  | 'GENERIC'
+  | 'SACRAMENTO_VALLEY'
+
+export type PlayableGeometryStatus =
+  | 'PROTOTYPE'
+  | 'MAPPED_APPROX'
+  | 'SURVEYED'
+
 export type GolfHole = {
   number: number
   name?: string
@@ -69,6 +78,7 @@ export type GolfHole = {
   hazards?: HazardZone[]
   outOfBoundsHalfWidth?: number
   greenSlope?: GreenSlope
+  environmentStyle?: CourseEnvironmentStyle
 }
 
 export type GolfCourse = {
@@ -77,4 +87,6 @@ export type GolfCourse = {
   location?: string
   holes: GolfHole[]
   prototype?: boolean
+  geometryStatus?: PlayableGeometryStatus
+  sourceNote?: string
 }
