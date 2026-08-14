@@ -6,10 +6,7 @@ import type { BallPhase } from './ball/BallState'
 import type { CameraPreference } from './camera/CameraManager'
 import GolfScene from './components/simulator/GolfScene'
 import { loadCourse } from './course/CourseLoader'
-import type {
-  GolfHole,
-  SurfaceType,
-} from './courses/courseTypes'
+import type { GolfHole, SurfaceType } from './courses/courseTypes'
 import { drivingRangeHole } from './courses/drivingRange'
 import { aimDirectionDegrees } from './courses/holeGeometryMath'
 import { recommendClub } from './gameplay/ClubManager'
@@ -106,13 +103,37 @@ function App() {
     [remainingYards, currentLie]
   )
 
-  function resetForHole(hole: GolfHole, clearShot = true) {
+  const liveScore: HoleScore = {
+    hole: activeHole.number,
+    par: activeHole.par,
+    strokes,
+    penalties,
+    status: 'PLAYED',
+  }
+
+  const displayedScore = completedScore ?? liveScore
+  const relativeToPar = scoreToPar(displayedScore)
+  const roundRelative = roundTotalToPar(round.scores)
+  const showScorecard =
+    mode === 'ROUND' && (holeComplete || round.complete)
+  const canAdvance =
+    mode === 'ROUND' &&
+    holeComplete &&
+    !round.complete &&
+    round.currentHoleIndex < course.holes.length - 1
+
+  const completionSummary = completedScore
+    ? isSkippedScore(completedScore)
+      ? 'SKIPPED · N/A'
+      : completedScore.status === 'MAX'
+        ? `MAX SCORE · ${completedScore.strokes}`
+        : `${scoreLabel(relativeToPar)} · ${completedScore.strokes + completedScore.penalties}`
+    : `${scoreLabel(relativeToPar)} · ${strokes + penalties}`
+
+  function resetForHole(hole: GolfHole) {
     const position = startPositionFor(hole)
 
-    if (clearShot) {
-      setShot(null)
-    }
-
+    setShot(null)
     setCurrentLie('TEE')
     setBallPosition(position)
     setRemainingYards(remainingYardsFor(hole, position))
@@ -170,14 +191,8 @@ function App() {
 
   function handleShotResult(result: ShotResult) {
     setShot((current) => {
-      if (!current || current.id !== result.id) {
-        return current
-      }
-
-      return {
-        ...current,
-        ...result,
-      }
+      if (!current || current.id !== result.id) return current
+      return { ...current, ...result }
     })
 
     if (mode === 'RANGE') {
@@ -195,8 +210,7 @@ function App() {
           },
           ...history,
         ].slice(0, 12))
-
-        resetForHole(drivingRangeHole, true)
+        resetForHole(drivingRangeHole)
       }
       return
     }
@@ -212,22 +226,20 @@ function App() {
       )
     }
 
-    if (result.holed) {
-      const completed: HoleScore = {
-        hole: activeHole.number,
-        par: activeHole.par,
-        strokes,
-        penalties,
-        status: 'PLAYED',
-      }
+    if (!result.holed) return
 
-      setHoleComplete(true)
-      setRemainingYards(0)
-      setCompletedScore(completed)
-      setRound((current) =>
-        saveHoleScore(current, completed, course)
-      )
+    const completed: HoleScore = {
+      hole: activeHole.number,
+      par: activeHole.par,
+      strokes,
+      penalties,
+      status: 'PLAYED',
     }
+
+    setHoleComplete(true)
+    setRemainingYards(0)
+    setCompletedScore(completed)
+    setRound((current) => saveHoleScore(current, completed, course))
   }
 
   function skipHole() {
@@ -240,8 +252,9 @@ function App() {
       return
     }
 
-    const noShotTaken = strokes === 0 && penalties === 0
+    const noShotTaken = strokes === 0
     const maxScore = maxStrokesForPar(activeHole.par)
+
     const skippedScore: HoleScore = noShotTaken
       ? {
           hole: activeHole.number,
@@ -271,7 +284,7 @@ function App() {
   }
 
   function nextHole() {
-    if (shotInProgress || round.complete || !holeComplete) return
+    if (shotInProgress || !canAdvance) return
 
     const nextRound = advanceRound(round, course)
     const nextHoleData = course.holes[nextRound.currentHoleIndex]
@@ -293,32 +306,6 @@ function App() {
     setMode('ROUND')
     resetForHole(course.holes[0])
   }
-
-  const liveScore: HoleScore = {
-    hole: activeHole.number,
-    par: activeHole.par,
-    strokes,
-    penalties,
-    status: 'PLAYED',
-  }
-
-  const displayedScore = completedScore ?? liveScore
-  const relativeToPar = scoreToPar(displayedScore)
-  const roundRelative = roundTotalToPar(round.scores)
-  const hasNextHole =
-    mode === 'ROUND' &&
-    !round.complete &&
-    round.currentHoleIndex < course.holes.length - 1
-  const showScorecard =
-    mode === 'ROUND' && (holeComplete || round.complete)
-
-  const completionSummary = completedScore
-    ? isSkippedScore(completedScore)
-      ? 'SKIPPED · N/A'
-      : completedScore.status === 'MAX'
-        ? `MAX SCORE · ${completedScore.strokes}`
-        : `${scoreLabel(relativeToPar)} · ${completedScore.strokes + completedScore.penalties}`
-    : `${scoreLabel(relativeToPar)} · ${strokes + penalties}`
 
   return (
     <main className="app">
@@ -411,25 +398,46 @@ function App() {
           <div className="course-hud course-hud-top-right">
             <HudMetric
               label={mode === 'ROUND' ? 'STROKES' : 'SHOT'}
-              value={mode === 'ROUND' ? `${strokes + penalties}` : `${rangeShots.length + 1}`}
+              value={
+                mode === 'ROUND'
+                  ? `${strokes + penalties}`
+                  : `${rangeShots.length + 1}`
+              }
             />
-            <HudMetric label="TO PIN" value={`${Math.round(remainingYards)} YD`} />
+            <HudMetric
+              label="TO PIN"
+              value={`${Math.round(remainingYards)} YD`}
+            />
             <HudMetric label="LIE" value={currentLie} />
             <HudMetric label="CLUB" value={recommendedClub} />
           </div>
 
           {shot ? (
             <div className="shot-hud">
-              <HudMetric label="BALL" value={`${shot.ballSpeed.toFixed(1)} MPH`} />
+              <HudMetric
+                label="BALL"
+                value={`${shot.ballSpeed.toFixed(1)} MPH`}
+              />
               <HudMetric
                 label="CLUB"
-                value={shot.clubSpeed != null ? `${shot.clubSpeed.toFixed(1)} MPH` : '--'}
+                value={
+                  shot.clubSpeed != null
+                    ? `${shot.clubSpeed.toFixed(1)} MPH`
+                    : '--'
+                }
               />
-              <HudMetric label="LAUNCH" value={`${shot.launchAngle.toFixed(1)}°`} />
+              <HudMetric
+                label="LAUNCH"
+                value={`${shot.launchAngle.toFixed(1)}°`}
+              />
               <HudMetric label="SPIN" value={`${shot.spinRate} RPM`} />
               <HudMetric
                 label="CARRY"
-                value={shot.carry != null ? `${Math.round(shot.carry)} YD` : '--'}
+                value={
+                  shot.carry != null
+                    ? `${Math.round(shot.carry)} YD`
+                    : '--'
+                }
               />
               <HudMetric
                 label="TOTAL"
@@ -494,12 +502,17 @@ function App() {
             {mode === 'ROUND' ? (
               <button
                 onClick={addPenalty}
-                disabled={holeComplete || round.complete || shotInProgress}
+                disabled={
+                  holeComplete || round.complete || shotInProgress
+                }
               >
                 + PENALTY
               </button>
             ) : null}
-            <button onClick={resetCurrentHole} disabled={shotInProgress}>
+            <button
+              onClick={resetCurrentHole}
+              disabled={shotInProgress}
+            >
               {mode === 'ROUND' ? 'RESET HOLE' : 'CLEAR BALL'}
             </button>
           </div>
@@ -531,7 +544,10 @@ function App() {
                 <p>No shots yet.</p>
               ) : (
                 rangeShots.slice(0, 5).map((entry, index) => (
-                  <div key={`${entry.id}-${index}`} className="range-shot-row">
+                  <div
+                    key={`${entry.id}-${index}`}
+                    className="range-shot-row"
+                  >
                     <span>#{rangeShots.length - index}</span>
                     <strong>{Math.round(entry.carry)} yd</strong>
                     <small>{entry.ballSpeed.toFixed(1)} mph</small>
