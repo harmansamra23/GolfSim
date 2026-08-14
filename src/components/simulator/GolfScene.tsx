@@ -1,4 +1,4 @@
-import { Sky } from '@react-three/drei'
+import { Html, Sky } from '@react-three/drei'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import * as THREE from 'three'
@@ -15,7 +15,7 @@ import {
 } from '../../camera/CameraManager'
 import { CourseHole } from '../../course/CourseHole'
 import { PinDistanceHud } from '../../course/PinDistanceHud'
-import type { GolfHole } from '../../courses/courseTypes'
+import type { GolfHole, GolfPoint } from '../../courses/courseTypes'
 import {
   BALL_FLIGHT_STEP_SECONDS,
   createLaunchVelocity,
@@ -32,13 +32,19 @@ import {
 } from '../../physics/PuttingPhysics'
 import { getSurfaceAtPosition } from '../../physics/surfacePhysics'
 import { metersToYards } from '../../simulator/units'
-import type { ShotData, ShotResult } from '../../types/shot'
+import type {
+  ShotData,
+  ShotPosition,
+  ShotResult,
+} from '../../types/shot'
 
 type GolfSceneProps = {
   hole: GolfHole
   shot: ShotData | null
+  aimTarget: GolfPoint
   cameraPreference: CameraPreference
   resetToken: number
+  resetPosition?: ShotPosition
   onBallPhaseChange: (phase: BallPhase) => void
   onShotResult: (result: ShotResult) => void
 }
@@ -58,13 +64,25 @@ const tracerGlowMaterial = new THREE.MeshBasicMaterial({
 function GolfScene({
   hole,
   shot,
+  aimTarget,
   cameraPreference,
   resetToken,
+  resetPosition,
   onBallPhaseChange,
   onShotResult,
 }: GolfSceneProps) {
+  const initialPosition = resetPosition ?? {
+    x: hole.tee.x,
+    y: 0.2,
+    z: hole.tee.z,
+  }
+
   const ballState = useRef<BallState>({
-    position: new THREE.Vector3(hole.tee.x, 0.2, hole.tee.z),
+    position: new THREE.Vector3(
+      initialPosition.x,
+      initialPosition.y,
+      initialPosition.z
+    ),
     velocity: new THREE.Vector3(),
     phase: 'ADDRESS',
   })
@@ -86,7 +104,7 @@ function GolfScene({
       shadows
       dpr={[1, 2]}
       camera={{
-        position: [hole.tee.x, 1.75, hole.tee.z + 14],
+        position: [initialPosition.x, 1.75, initialPosition.z + 14],
         fov: 50,
         near: 0.1,
         far: 1400,
@@ -130,11 +148,13 @@ function GolfScene({
 
       <CourseHole hole={hole} />
       <PinDistanceHud hole={hole} getBallState={getBallState} />
+      <AimMarker target={aimTarget} />
 
       <AnimatedGolfBall
         hole={hole}
         shot={shot}
         resetToken={resetToken}
+        resetPosition={resetPosition}
         setBallState={setBallState}
         onBallPhaseChange={onBallPhaseChange}
         onShotResult={onShotResult}
@@ -149,10 +169,49 @@ function GolfScene({
   )
 }
 
+function AimMarker({ target }: { target: GolfPoint }) {
+  return (
+    <group position={[target.x, 0.08, target.z]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[1.15, 1.6, 32]} />
+        <meshBasicMaterial
+          color="#f4d64f"
+          transparent
+          opacity={0.9}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      <mesh position={[0, 1.8, 0]}>
+        <cylinderGeometry args={[0.035, 0.035, 3.6, 8]} />
+        <meshBasicMaterial color="#f4d64f" />
+      </mesh>
+      <Html position={[0, 4.1, 0]} center distanceFactor={16}>
+        <div
+          style={{
+            padding: '4px 8px',
+            borderRadius: '999px',
+            background: 'rgba(15, 20, 16, 0.82)',
+            color: '#ffe66a',
+            fontSize: '9px',
+            fontWeight: 800,
+            letterSpacing: '0.1em',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+          }}
+        >
+          AIM
+        </div>
+      </Html>
+    </group>
+  )
+}
+
 function AnimatedGolfBall({
   hole,
   shot,
   resetToken,
+  resetPosition,
   setBallState,
   onBallPhaseChange,
   onShotResult,
@@ -160,18 +219,26 @@ function AnimatedGolfBall({
   hole: GolfHole
   shot: ShotData | null
   resetToken: number
+  resetPosition?: ShotPosition
   setBallState: BallStateWriter
   onBallPhaseChange: (phase: BallPhase) => void
   onShotResult: (result: ShotResult) => void
 }) {
+  const initialPosition = resetPosition ?? {
+    x: hole.tee.x,
+    y: 0.2,
+    z: hole.tee.z,
+  }
   const ballRef = useRef<THREE.Mesh>(null)
   const tracerRef = useRef<THREE.Group>(null)
   const position = useRef(
-    new THREE.Vector3(hole.tee.x, 0.2, hole.tee.z)
+    new THREE.Vector3(
+      initialPosition.x,
+      initialPosition.y,
+      initialPosition.z
+    )
   )
-  const startPosition = useRef(
-    new THREE.Vector3(hole.tee.x, 0.2, hole.tee.z)
-  )
+  const startPosition = useRef(position.current.clone())
   const velocity = useRef(new THREE.Vector3())
   const currentShot = useRef<ShotData | null>(null)
   const lastShotId = useRef<number | null>(null)
@@ -217,7 +284,13 @@ function AnimatedGolfBall({
     lastShotId.current = null
     flightAccumulator.current = 0
 
-    position.current.set(hole.tee.x, 0.2, hole.tee.z)
+    const next = resetPosition ?? {
+      x: hole.tee.x,
+      y: 0.2,
+      z: hole.tee.z,
+    }
+
+    position.current.set(next.x, next.y, next.z)
     startPosition.current.copy(position.current)
     velocity.current.set(0, 0, 0)
     setPhase('ADDRESS')
@@ -298,6 +371,20 @@ function AnimatedGolfBall({
       position.current.z = hole.green.center.z
     }
 
+    const landedPosition = position.current.clone()
+    const landedSurface = holed
+      ? 'GREEN'
+      : getSurfaceAtPosition(hole, landedPosition.x, landedPosition.z)
+    const hazard =
+      landedSurface === 'WATER' || landedSurface === 'OUT_OF_BOUNDS'
+        ? landedSurface
+        : undefined
+
+    if (hazard) {
+      position.current.copy(startPosition.current)
+      position.current.y = 0.2
+    }
+
     if (ballRef.current) {
       ballRef.current.position.copy(position.current)
     }
@@ -309,17 +396,17 @@ function AnimatedGolfBall({
     )
 
     const totalMeters = Math.hypot(
-      position.current.x - startPosition.current.x,
-      position.current.z - startPosition.current.z
+      landedPosition.x - startPosition.current.x,
+      landedPosition.z - startPosition.current.z
     )
 
-    const finalSurface = holed
-      ? 'GREEN'
-      : getSurfaceAtPosition(
+    const finalSurface = hazard
+      ? getSurfaceAtPosition(
           hole,
           position.current.x,
           position.current.z
         )
+      : landedSurface
 
     onShotResult({
       id: current.id,
@@ -327,6 +414,8 @@ function AnimatedGolfBall({
       totalDistance: metersToYards(totalMeters),
       lie: finalSurface,
       holed,
+      penaltyStrokes: hazard ? 1 : 0,
+      hazard,
       finalPosition: {
         x: position.current.x,
         y: position.current.y,
@@ -367,6 +456,11 @@ function AnimatedGolfBall({
       position.current.z
     )
 
+    if (surface === 'WATER' || surface === 'OUT_OF_BOUNDS') {
+      finishShot(current, false)
+      return
+    }
+
     const impact = applyGroundImpact(
       velocity.current,
       surface,
@@ -406,7 +500,8 @@ function AnimatedGolfBall({
       while (
         flightAccumulator.current >= BALL_FLIGHT_STEP_SECONDS &&
         substeps < 8 &&
-        !rolling.current
+        !rolling.current &&
+        active.current
       ) {
         handleAirborneStep(
           current,
@@ -422,7 +517,11 @@ function AnimatedGolfBall({
       let groundSpeed: number
 
       if (current.kind === 'PUTT') {
-        groundSpeed = stepPutt(velocity.current, delta)
+        groundSpeed = stepPutt(
+          velocity.current,
+          delta,
+          hole.greenSlope
+        )
 
         if (
           isBallHoled(
@@ -440,6 +539,11 @@ function AnimatedGolfBall({
           position.current.x,
           position.current.z
         )
+
+        if (surface === 'WATER' || surface === 'OUT_OF_BOUNDS') {
+          finishShot(current, false)
+          return
+        }
 
         groundSpeed = stepGroundRoll(
           velocity.current,
@@ -492,7 +596,11 @@ function AnimatedGolfBall({
     <>
       <mesh
         ref={ballRef}
-        position={[hole.tee.x, 0.2, hole.tee.z]}
+        position={[
+          initialPosition.x,
+          initialPosition.y,
+          initialPosition.z,
+        ]}
         castShadow
       >
         <sphereGeometry args={[0.18, 32, 32]} />
