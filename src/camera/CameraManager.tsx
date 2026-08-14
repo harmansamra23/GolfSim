@@ -24,7 +24,6 @@ export function CameraManager({
   const desiredPosition = useRef(new THREE.Vector3())
   const desiredTarget = useRef(new THREE.Vector3())
   const awayFromFlag = useRef(new THREE.Vector3())
-  const desiredFov = useRef(58)
 
   useFrame((_, delta) => {
     const state = getBallState()
@@ -80,53 +79,34 @@ export function CameraManager({
         addressHeight,
         ball.z + awayFromFlag.current.z * addressBackDistance
       )
-      desiredFov.current = THREE.MathUtils.clamp(
-        54 + distanceToFlag * 0.015,
-        56,
-        62
-      )
     } else if (state.phase === 'FLIGHT') {
       desiredPosition.current.set(
         ball.x + awayFromFlag.current.x * 12,
         ball.y + 5.2,
         ball.z + awayFromFlag.current.z * 12
       )
-      desiredFov.current = 52
     } else if (state.phase === 'LANDING') {
       desiredPosition.current.set(
         ball.x + awayFromFlag.current.x * 12,
         ball.y + 4.6,
         ball.z + awayFromFlag.current.z * 12
       )
-      desiredFov.current = 50
     } else if (state.phase === 'ROLLING') {
       desiredPosition.current.set(
         ball.x + awayFromFlag.current.x * 9,
         3.6,
         ball.z + awayFromFlag.current.z * 9
       )
-      desiredFov.current = 52
     } else {
       desiredPosition.current.set(
         ball.x + awayFromFlag.current.x * 9,
         4,
         ball.z + awayFromFlag.current.z * 9
       )
-      desiredFov.current = 54
     }
 
     const smoothing = 1 - Math.exp(-4 * delta)
     camera.position.lerp(desiredPosition.current, smoothing)
-
-    if (camera instanceof THREE.PerspectiveCamera) {
-      camera.fov = THREE.MathUtils.lerp(
-        camera.fov,
-        desiredFov.current,
-        smoothing
-      )
-      camera.updateProjectionMatrix()
-    }
-
     camera.lookAt(desiredTarget.current)
 
     if (controlsRef.current) {
