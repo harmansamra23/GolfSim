@@ -7,7 +7,9 @@ const roughNormalScale = new Vector2(1.8, 1.8)
 
 export function Terrain({ hole }: { hole: GolfHole }) {
   const centerZ = (hole.tee.z + hole.green.center.z) / 2
-  const length = Math.abs(hole.green.center.z - hole.tee.z) + 160
+  const length = Math.abs(hole.green.center.z - hole.tee.z) + 180
+  const width =
+    hole.environmentStyle === 'SACRAMENTO_VALLEY' ? 420 : 320
 
   return (
     <mesh
@@ -15,7 +17,7 @@ export function Terrain({ hole }: { hole: GolfHole }) {
       position={[0, 0, centerZ]}
       receiveShadow
     >
-      <planeGeometry args={[320, length]} />
+      <planeGeometry args={[width, length]} />
 
       <meshStandardMaterial
         map={courseMaterials.rough.map}
