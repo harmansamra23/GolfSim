@@ -6,6 +6,8 @@ export type SurfaceType =
   | 'GREEN'
   | 'BUNKER'
   | 'PATH'
+  | 'WATER'
+  | 'OUT_OF_BOUNDS'
 
 export type GolfPoint = {
   x: number
@@ -16,6 +18,17 @@ export type EllipseZone = {
   center: GolfPoint
   radiusX: number
   radiusZ: number
+}
+
+export type HazardZone = EllipseZone & {
+  id: string
+  label: string
+  type: 'WATER' | 'OUT_OF_BOUNDS'
+}
+
+export type GreenSlope = {
+  xPercent: number
+  zPercent: number
 }
 
 export type FairwayControlPoint = {
@@ -53,6 +66,9 @@ export type GolfHole = {
   bunkers: EllipseZone[]
   fairway: FairwayDefinition
   cartPath?: CartPathDefinition
+  hazards?: HazardZone[]
+  outOfBoundsHalfWidth?: number
+  greenSlope?: GreenSlope
 }
 
 export type GolfCourse = {
