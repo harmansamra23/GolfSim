@@ -1,5 +1,8 @@
 import type { GolfCourse } from '../courses/courseTypes'
-import type { HoleScore } from './ScoreManager'
+import {
+  isSkippedScore,
+  type HoleScore,
+} from './ScoreManager'
 
 export type RoundState = {
   courseId: string
@@ -63,11 +66,18 @@ export function advanceRound(
 
 export function totalStrokes(scores: HoleScore[]) {
   return scores.reduce(
-    (total, score) => total + score.strokes + score.penalties,
+    (total, score) =>
+      isSkippedScore(score)
+        ? total
+        : total + score.strokes + score.penalties,
     0
   )
 }
 
 export function totalPar(scores: HoleScore[]) {
-  return scores.reduce((total, score) => total + score.par, 0)
+  return scores.reduce(
+    (total, score) =>
+      isSkippedScore(score) ? total : total + score.par,
+    0
+  )
 }
