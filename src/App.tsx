@@ -179,24 +179,23 @@ function App() {
     })
 
     if (mode === 'RANGE') {
-      if (
-        result.totalDistance != null &&
-        result.carry != null &&
-        shot
-      ) {
+      const carry = result.carry
+      const total = result.totalDistance
+      const completedShot = shot
+
+      if (carry != null && total != null && completedShot) {
         setRangeShots((history) => [
           {
             id: result.id,
-            ballSpeed: shot.ballSpeed,
-            carry: result.carry,
-            total: result.totalDistance,
+            ballSpeed: completedShot.ballSpeed,
+            carry,
+            total,
           },
           ...history,
         ].slice(0, 12))
 
-        // Clear the completed shot before resetting the range ball.
-        // Leaving the same shot id mounted causes the scene to detect it
-        // as a brand-new shot after reset and replay forever.
+        // A completed range shot must be cleared before the reset.
+        // Otherwise the same shot id is detected again and replayed.
         resetForHole(drivingRangeHole, true)
       }
       return
@@ -276,7 +275,7 @@ function App() {
           <h1>GolfSim</h1>
           <p>
             {mode === 'ROUND'
-              ? `${course.name} · ${course.prototype ? 'PROTOTYPE LAYOUT' : 'COURSE'}`
+              ? `${course.name} · ${activeHole.name ?? `Hole ${activeHole.number}`}`
               : 'Driving Range'}
           </p>
         </div>
@@ -308,6 +307,12 @@ function App() {
           <span>{mode === 'ROUND' ? 'HOLE' : 'MODE'}</span>
           <strong>{mode === 'ROUND' ? activeHole.number : 'RANGE'}</strong>
         </div>
+        {mode === 'ROUND' ? (
+          <div>
+            <span>LAYOUT</span>
+            <strong>{activeHole.name ?? `Hole ${activeHole.number}`}</strong>
+          </div>
+        ) : null}
         <div>
           <span>PAR</span>
           <strong>{mode === 'ROUND' ? activeHole.par : '–'}</strong>
