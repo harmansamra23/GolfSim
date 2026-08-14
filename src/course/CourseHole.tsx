@@ -6,6 +6,7 @@ import { Flag } from './Flag'
 import { GrassDetail } from './GrassDetail'
 import { Green } from './Green'
 import { Hazards } from './Hazards'
+import { SunsetEnvironment } from './SunsetEnvironment'
 import { TeeBox } from './TeeBox'
 import { Terrain } from './Terrain'
 import { Vegetation } from './Vegetation'
@@ -13,6 +14,7 @@ import { Vegetation } from './Vegetation'
 export function CourseHole({ hole }: { hole: GolfHole }) {
   return (
     <>
+      <SunsetEnvironment />
       <CourseScenery hole={hole} />
       <Terrain hole={hole} />
       <Fairway hole={hole} />
