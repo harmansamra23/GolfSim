@@ -22,8 +22,16 @@ export function CourseScenery({ hole }: { hole: GolfHole }) {
     }
   })
 
+  const mountainZ = hole.green.center.z - 190
+  const mountainCenterX = hole.green.center.x * 0.35
+
   return (
     <group>
+      <MountainRange
+        centerX={mountainCenterX}
+        z={mountainZ}
+      />
+
       {rows.map((row, index) => (
         <group key={index}>
           <LowHill
@@ -52,6 +60,63 @@ export function CourseScenery({ hole }: { hole: GolfHole }) {
             scale={row.treeScale * 0.88}
           />
         </group>
+      ))}
+    </group>
+  )
+}
+
+function MountainRange({
+  centerX,
+  z,
+}: {
+  centerX: number
+  z: number
+}) {
+  const peaks = [
+    { x: -210, height: 72, radius: 105, depth: 0 },
+    { x: -125, height: 105, radius: 125, depth: -18 },
+    { x: -38, height: 82, radius: 108, depth: 8 },
+    { x: 55, height: 122, radius: 138, depth: -28 },
+    { x: 150, height: 92, radius: 118, depth: 4 },
+    { x: 235, height: 68, radius: 96, depth: -12 },
+  ]
+
+  return (
+    <group>
+      {peaks.map((peak, index) => (
+        <mesh
+          key={index}
+          position={[
+            centerX + peak.x,
+            peak.height * 0.42 - 8,
+            z + peak.depth,
+          ]}
+          scale={[1, 1, 0.72]}
+          receiveShadow
+        >
+          <coneGeometry
+            args={[peak.radius, peak.height, 7, 3]}
+          />
+          <meshStandardMaterial
+            color={index % 2 === 0 ? '#5f746b' : '#536a62'}
+            roughness={1}
+          />
+        </mesh>
+      ))}
+
+      {peaks.slice(1, 5).map((peak, index) => (
+        <mesh
+          key={`ridge-${index}`}
+          position={[
+            centerX + peak.x + 34,
+            peak.height * 0.28 - 13,
+            z - 38 + peak.depth,
+          ]}
+          scale={[1.1, 0.72, 0.8]}
+        >
+          <coneGeometry args={[peak.radius * 0.8, peak.height * 0.72, 6, 2]} />
+          <meshStandardMaterial color="#73837a" roughness={1} />
+        </mesh>
       ))}
     </group>
   )
