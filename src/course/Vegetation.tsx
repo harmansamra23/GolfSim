@@ -20,12 +20,22 @@ const trunkMaterial = new THREE.MeshStandardMaterial({
   roughness: 0.96,
 })
 const canopyGeometry = new THREE.IcosahedronGeometry(2.2, 1)
-const canopyMaterials = [
-  new THREE.MeshStandardMaterial({ color: '#315b31', roughness: 0.94 }),
-  new THREE.MeshStandardMaterial({ color: '#3d6c38', roughness: 0.94 }),
-  new THREE.MeshStandardMaterial({ color: '#2f5830', roughness: 0.94 }),
-  new THREE.MeshStandardMaterial({ color: '#47753f', roughness: 0.94 }),
-]
+const canopyMaterialA = new THREE.MeshStandardMaterial({
+  color: '#315b31',
+  roughness: 0.94,
+})
+const canopyMaterialB = new THREE.MeshStandardMaterial({
+  color: '#3d6c38',
+  roughness: 0.94,
+})
+const canopyMaterialC = new THREE.MeshStandardMaterial({
+  color: '#2f5830',
+  roughness: 0.94,
+})
+const canopyMaterialD = new THREE.MeshStandardMaterial({
+  color: '#47753f',
+  roughness: 0.94,
+})
 
 export function Vegetation({ hole }: { hole: GolfHole }) {
   const instances = useMemo(() => createTreeInstances(hole), [hole])
@@ -75,17 +85,23 @@ function createTreeInstances(hole: GolfHole): TreeInstance[] {
 
 function InstancedOakRows({ instances }: { instances: TreeInstance[] }) {
   const trunksRef = useRef<THREE.InstancedMesh>(null)
-  const canopyRefs = [
-    useRef<THREE.InstancedMesh>(null),
-    useRef<THREE.InstancedMesh>(null),
-    useRef<THREE.InstancedMesh>(null),
-    useRef<THREE.InstancedMesh>(null),
-  ]
+  const canopyARef = useRef<THREE.InstancedMesh>(null)
+  const canopyBRef = useRef<THREE.InstancedMesh>(null)
+  const canopyCRef = useRef<THREE.InstancedMesh>(null)
+  const canopyDRef = useRef<THREE.InstancedMesh>(null)
 
   useLayoutEffect(() => {
     const trunkMesh = trunksRef.current
-    if (!trunkMesh) return
+    const canopyA = canopyARef.current
+    const canopyB = canopyBRef.current
+    const canopyC = canopyCRef.current
+    const canopyD = canopyDRef.current
 
+    if (!trunkMesh || !canopyA || !canopyB || !canopyC || !canopyD) {
+      return
+    }
+
+    const canopyMeshes = [canopyA, canopyB, canopyC, canopyD]
     const treeMatrix = new THREE.Matrix4()
     const localMatrix = new THREE.Matrix4()
     const finalMatrix = new THREE.Matrix4()
@@ -126,10 +142,7 @@ function InstancedOakRows({ instances }: { instances: TreeInstance[] }) {
       finalMatrix.multiplyMatrices(treeMatrix, localMatrix)
       trunkMesh.setMatrixAt(index, finalMatrix)
 
-      canopyRefs.forEach((ref, canopyIndex) => {
-        const canopy = ref.current
-        if (!canopy) return
-
+      canopyMeshes.forEach((canopy, canopyIndex) => {
         const position = tree.valleyStyle
           ? canopyPositions[canopyIndex]
           : canopyPositions[canopyIndex].clone().multiplyScalar(0.9)
@@ -146,10 +159,9 @@ function InstancedOakRows({ instances }: { instances: TreeInstance[] }) {
     trunkMesh.instanceMatrix.needsUpdate = true
     trunkMesh.computeBoundingSphere()
 
-    canopyRefs.forEach((ref) => {
-      if (!ref.current) return
-      ref.current.instanceMatrix.needsUpdate = true
-      ref.current.computeBoundingSphere()
+    canopyMeshes.forEach((canopy) => {
+      canopy.instanceMatrix.needsUpdate = true
+      canopy.computeBoundingSphere()
     })
   }, [instances])
 
@@ -161,15 +173,30 @@ function InstancedOakRows({ instances }: { instances: TreeInstance[] }) {
         castShadow
         receiveShadow
       />
-      {canopyRefs.map((ref, index) => (
-        <instancedMesh
-          key={index}
-          ref={ref}
-          args={[canopyGeometry, canopyMaterials[index], instances.length]}
-          castShadow
-          receiveShadow
-        />
-      ))}
+      <instancedMesh
+        ref={canopyARef}
+        args={[canopyGeometry, canopyMaterialA, instances.length]}
+        castShadow
+        receiveShadow
+      />
+      <instancedMesh
+        ref={canopyBRef}
+        args={[canopyGeometry, canopyMaterialB, instances.length]}
+        castShadow
+        receiveShadow
+      />
+      <instancedMesh
+        ref={canopyCRef}
+        args={[canopyGeometry, canopyMaterialC, instances.length]}
+        castShadow
+        receiveShadow
+      />
+      <instancedMesh
+        ref={canopyDRef}
+        args={[canopyGeometry, canopyMaterialD, instances.length]}
+        castShadow
+        receiveShadow
+      />
     </>
   )
 }
