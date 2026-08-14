@@ -8,6 +8,112 @@ const MOUNTAIN_COUNT = 30
 const MOUNTAIN_RADIUS = 560
 
 export function CourseScenery({ hole }: { hole: GolfHole }) {
+  if (hole.environmentStyle === 'SACRAMENTO_VALLEY') {
+    return <SacramentoValleyScenery hole={hole} />
+  }
+
+  return <GenericScenery hole={hole} />
+}
+
+function SacramentoValleyScenery({ hole }: { hole: GolfHole }) {
+  const holeLength = Math.abs(hole.green.center.z - hole.tee.z)
+  const worldCenterX = (hole.tee.x + hole.green.center.x) / 2
+  const worldCenterZ = (hole.tee.z + hole.green.center.z) / 2
+
+  const horizonTrees = Array.from({ length: 18 }, (_, index) => {
+    const side = index % 2 === 0 ? -1 : 1
+    const t = (Math.floor(index / 2) + 1) / 10
+    const z = hole.tee.z - 25 - t * (holeLength + 55)
+    const center = fairwayCenterX(hole, z)
+    const width = fairwayHalfWidth(hole, z)
+
+    return {
+      x: center + side * (width + 45 + (index % 3) * 12),
+      z,
+      scale: 0.72 + (index % 5) * 0.08,
+    }
+  })
+
+  const fieldBands = Array.from({ length: 5 }, (_, index) => ({
+    x: worldCenterX + (index - 2) * 190,
+    z: worldCenterZ - 120 - (index % 2) * 70,
+    width: 180 + (index % 3) * 55,
+    depth: 260 + (index % 2) * 110,
+  }))
+
+  return (
+    <group>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[worldCenterX, -0.24, worldCenterZ]}
+        receiveShadow
+      >
+        <circleGeometry args={[760, 96]} />
+        <meshStandardMaterial color="#49633c" roughness={1} />
+      </mesh>
+
+      {fieldBands.map((field, index) => (
+        <mesh
+          key={`field-${index}`}
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[field.x, -0.21, field.z]}
+        >
+          <planeGeometry args={[field.width, field.depth]} />
+          <meshStandardMaterial
+            color={index % 2 === 0 ? '#6f7441' : '#59683d'}
+            roughness={1}
+          />
+        </mesh>
+      ))}
+
+      {horizonTrees.map((tree, index) => (
+        <DistantOak
+          key={`valley-oak-${index}`}
+          position={[tree.x, 0, tree.z]}
+          scale={tree.scale}
+        />
+      ))}
+
+      <HorizonLine
+        centerX={worldCenterX}
+        centerZ={worldCenterZ - holeLength * 0.45}
+      />
+    </group>
+  )
+}
+
+function HorizonLine({
+  centerX,
+  centerZ,
+}: {
+  centerX: number
+  centerZ: number
+}) {
+  return (
+    <group position={[centerX, 0, centerZ]}>
+      {Array.from({ length: 20 }, (_, index) => {
+        const angle = (index / 20) * Math.PI * 2
+        const radius = 610 + (index % 4) * 22
+        return (
+          <mesh
+            key={index}
+            position={[
+              Math.cos(angle) * radius,
+              5 + (index % 3),
+              Math.sin(angle) * radius,
+            ]}
+            scale={[44 + (index % 4) * 8, 7 + (index % 3), 18]}
+          >
+            <sphereGeometry args={[1, 12, 6]} />
+            <meshStandardMaterial color="#52654b" roughness={1} />
+          </mesh>
+        )
+      })}
+    </group>
+  )
+}
+
+function GenericScenery({ hole }: { hole: GolfHole }) {
   const holeLength = Math.abs(hole.green.center.z - hole.tee.z)
   const worldCenterX = (hole.tee.x + hole.green.center.x) / 2
   const worldCenterZ = (hole.tee.z + hole.green.center.z) / 2
@@ -69,23 +175,8 @@ export function CourseScenery({ hole }: { hole: GolfHole }) {
             position={[0, mountain.height * 0.42 - 9, 0]}
             scale={[1, 1, 0.72]}
           >
-            <coneGeometry
-              args={[mountain.width, mountain.height, 7, 3]}
-            />
-            <meshStandardMaterial
-              color={mountain.color}
-              roughness={1}
-            />
-          </mesh>
-
-          <mesh
-            position={[mountain.width * 0.58, mountain.height * 0.25 - 12, -20]}
-            scale={[0.78, 0.7, 0.65]}
-          >
-            <coneGeometry
-              args={[mountain.width * 0.82, mountain.height * 0.72, 6, 2]}
-            />
-            <meshStandardMaterial color="#7d8a82" roughness={1} />
+            <coneGeometry args={[mountain.width, mountain.height, 7, 3]} />
+            <meshStandardMaterial color={mountain.color} roughness={1} />
           </mesh>
         </group>
       ))}
@@ -100,23 +191,8 @@ export function CourseScenery({ hole }: { hole: GolfHole }) {
             position={[row.rightX + 18, -3.1, row.z - 28]}
             scale={[42 * row.hillScale, 8, 52]}
           />
-
-          <DistantTree
-            position={[row.leftX, 0, row.z]}
-            scale={row.treeScale}
-          />
-          <DistantTree
-            position={[row.rightX, 0, row.z - 8]}
-            scale={row.treeScale * 1.05}
-          />
-          <DistantTree
-            position={[row.leftX - 12, 0, row.z - 18]}
-            scale={row.treeScale * 0.82}
-          />
-          <DistantTree
-            position={[row.rightX + 14, 0, row.z - 22]}
-            scale={row.treeScale * 0.88}
-          />
+          <DistantTree position={[row.leftX, 0, row.z]} scale={row.treeScale} />
+          <DistantTree position={[row.rightX, 0, row.z - 8]} scale={row.treeScale * 1.05} />
         </group>
       ))}
     </group>
@@ -138,6 +214,35 @@ function LowHill({
   )
 }
 
+function DistantOak({
+  position,
+  scale,
+}: {
+  position: [number, number, number]
+  scale: number
+}) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh position={[0, 3.2, 0]} castShadow>
+        <cylinderGeometry args={[0.45, 0.72, 6.4, 8]} />
+        <meshStandardMaterial color="#51402d" roughness={1} />
+      </mesh>
+      <mesh position={[0, 7.1, 0]} scale={[1.55, 0.78, 1.35]} castShadow>
+        <icosahedronGeometry args={[3.6, 1]} />
+        <meshStandardMaterial color="#365a32" roughness={1} />
+      </mesh>
+      <mesh position={[2.5, 6.6, 0.3]} scale={[1.1, 0.62, 1]} castShadow>
+        <icosahedronGeometry args={[2.7, 1]} />
+        <meshStandardMaterial color="#3f6738" roughness={1} />
+      </mesh>
+      <mesh position={[-2.4, 6.7, -0.4]} scale={[1.1, 0.65, 1]} castShadow>
+        <icosahedronGeometry args={[2.6, 1]} />
+        <meshStandardMaterial color="#31542f" roughness={1} />
+      </mesh>
+    </group>
+  )
+}
+
 function DistantTree({
   position,
   scale,
@@ -151,20 +256,9 @@ function DistantTree({
         <cylinderGeometry args={[0.3, 0.45, 7, 8]} />
         <meshStandardMaterial color="#493423" roughness={1} />
       </mesh>
-
       <mesh position={[0, 7.9, 0]} castShadow>
         <sphereGeometry args={[3.2, 10, 8]} />
         <meshStandardMaterial color="#234d2b" roughness={1} />
-      </mesh>
-
-      <mesh position={[2.1, 7.2, 0.35]} castShadow>
-        <sphereGeometry args={[2.2, 9, 7]} />
-        <meshStandardMaterial color="#2d5c33" roughness={1} />
-      </mesh>
-
-      <mesh position={[-2, 7.3, -0.45]} castShadow>
-        <sphereGeometry args={[2.15, 9, 7]} />
-        <meshStandardMaterial color="#315f36" roughness={1} />
       </mesh>
     </group>
   )
