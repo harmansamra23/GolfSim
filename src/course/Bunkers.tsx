@@ -13,7 +13,7 @@ function createBunkerGeometry() {
     const x = positions.getX(index)
     const y = positions.getY(index)
     const radius = Math.min(1, Math.hypot(x, y))
-    const depth = -0.34 * Math.pow(1 - radius, 1.35)
+    const depth = -0.42 * Math.pow(1 - radius, 1.25)
     positions.setZ(index, depth)
   }
 
@@ -37,21 +37,21 @@ export function Bunkers({ hole }: { hole: GolfHole }) {
         return (
           <group
             key={index}
-            position={[bunker.center.x, bunkerY + 0.075, bunker.center.z]}
+            position={[bunker.center.x, bunkerY + 0.08, bunker.center.z]}
           >
             <mesh
               rotation={[-Math.PI / 2, 0, 0]}
               scale={[
-                bunker.radiusX * 1.15,
-                bunker.radiusZ * 1.15,
+                bunker.radiusX * 1.2,
+                bunker.radiusZ * 1.2,
                 1,
               ]}
-              position={[0, -0.04, 0]}
+              position={[0, -0.045, 0]}
               receiveShadow
             >
-              <ringGeometry args={[0.84, 1, 64]} />
+              <ringGeometry args={[0.8, 1, 64]} />
               <meshStandardMaterial
-                color="#5f7b48"
+                color="#4f6f3d"
                 roughness={1}
                 side={THREE.DoubleSide}
               />
@@ -67,25 +67,25 @@ export function Bunkers({ hole }: { hole: GolfHole }) {
                 map={courseMaterials.sand.map}
                 normalMap={courseMaterials.sand.normalMap}
                 roughnessMap={courseMaterials.sand.roughnessMap}
-                roughness={0.94}
-                color="#ead79f"
+                roughness={0.98}
+                color="#fff0c2"
               />
             </mesh>
 
             <mesh
               rotation={[-Math.PI / 2, 0, 0]}
               scale={[
-                bunker.radiusX * 0.98,
-                bunker.radiusZ * 0.98,
+                bunker.radiusX * 0.96,
+                bunker.radiusZ * 0.96,
                 1,
               ]}
-              position={[0, -0.055, 0]}
+              position={[0, -0.06, 0]}
             >
-              <ringGeometry args={[0.88, 1, 64]} />
+              <ringGeometry args={[0.87, 1, 64]} />
               <meshBasicMaterial
-                color="#8d7547"
+                color="#aa8c57"
                 transparent
-                opacity={0.34}
+                opacity={0.3}
                 side={THREE.DoubleSide}
               />
             </mesh>
