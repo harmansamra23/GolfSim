@@ -22,31 +22,55 @@ export function terrainHeightAtPosition(
 
   const center = fairwayCenterX(hole, z)
   const halfWidth = Math.max(8, fairwayHalfWidth(hole, z))
-  const lateral = Math.min(3, Math.abs(x - center) / halfWidth)
+  const signedLateral = (x - center) / halfWidth
+  const lateral = Math.min(3, Math.abs(signedLateral))
 
-  const playableRoll =
-    Math.sin(z * 0.018 + hole.number * 0.73) * 0.08 +
-    Math.sin(x * 0.028 - z * 0.008 + hole.number) * 0.05
-  const crown = Math.max(0, 1 - lateral) * 0.06
+  // Low, broad land movement that remains believable for a valley course.
+  const longWave =
+    Math.sin(z * 0.014 + hole.number * 0.61) * 0.16 +
+    Math.sin(z * 0.027 - hole.number * 0.37) * 0.07
+  const crossFall = signedLateral *
+    Math.sin(z * 0.011 + hole.number * 0.43) *
+    0.12
 
-  const roughBlend = smoothstep(0.95, 2.35, lateral)
+  // A subtle fairway crown gives the camera something to read in side light.
+  const fairwayCrown = Math.max(0, 1 - lateral) * 0.12
+
+  // Outside the playable corridor the land moves more strongly and forms
+  // natural shoulders instead of reading as a perfectly flat plane.
+  const roughBlend = smoothstep(0.9, 2.3, lateral)
   const roughRoll = roughBlend * (
-    Math.sin(x * 0.036 + z * 0.013 + hole.number) * 0.34 +
-    Math.sin(x * 0.071 - z * 0.019) * 0.16
+    Math.sin(x * 0.031 + z * 0.012 + hole.number) * 0.48 +
+    Math.sin(x * 0.061 - z * 0.018 + hole.number * 0.4) * 0.22
   )
+  const edgeShoulder =
+    smoothstep(1.0, 1.8, lateral) *
+    (0.18 + 0.15 * Math.sin(z * 0.02 + hole.number))
 
-  const approachLift = smoothstep(0.76, 0.98, along) * 0.08
+  const approachLift = smoothstep(0.68, 0.96, along) * 0.2
   const teeDistance = Math.hypot(x - hole.tee.x, z - hole.tee.z)
-  const teeBlend = smoothstep(9, 25, teeDistance)
+  const teeBlend = smoothstep(10, 30, teeDistance)
 
   const greenDistance = Math.hypot(
     (x - hole.green.center.x) / Math.max(1, hole.green.radiusX),
     (z - hole.green.center.z) / Math.max(1, hole.green.radiusZ)
   )
-  const greenPlateau = (1 - smoothstep(0.7, 1.55, greenDistance)) * 0.08
+  const greenPlateau =
+    (1 - smoothstep(0.72, 1.55, greenDistance)) * 0.18
+  const greenShoulder =
+    (1 - smoothstep(1.0, 2.05, greenDistance)) *
+    smoothstep(0.62, 1.15, greenDistance) *
+    0.16
 
   return (
-    (playableRoll + crown + roughRoll + approachLift) * teeBlend +
-    greenPlateau
+    (longWave +
+      crossFall +
+      fairwayCrown +
+      roughRoll +
+      edgeShoulder +
+      approachLift) *
+      teeBlend +
+    greenPlateau +
+    greenShoulder
   )
 }
