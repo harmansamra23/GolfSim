@@ -7,6 +7,8 @@ on:
       - milestone-phases3-10
       - milestone-phases11-14
       - milestone-gameplay-features
+      - milestone-phases15-16
+      - milestone-phase17-visual-depth
 
 jobs:
   quality:
