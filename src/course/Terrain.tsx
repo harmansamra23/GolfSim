@@ -5,7 +5,7 @@ import { courseMaterials } from '../components/simulator/CourseMaterials'
 import type { GolfHole } from '../courses/courseTypes'
 import { terrainHeightAtPosition } from './terrainHeight'
 
-const roughNormalScale = new THREE.Vector2(1.65, 1.65)
+const roughNormalScale = new THREE.Vector2(1.8, 1.8)
 
 export function Terrain({ hole }: { hole: GolfHole }) {
   const centerZ = (hole.tee.z + hole.green.center.z) / 2
@@ -44,8 +44,8 @@ export function Terrain({ hole }: { hole: GolfHole }) {
         normalMap={courseMaterials.rough.normalMap}
         normalScale={roughNormalScale}
         roughnessMap={courseMaterials.rough.roughnessMap}
-        color="#91ad72"
-        roughness={0.96}
+        color="#4f6f3f"
+        roughness={1}
       />
     </mesh>
   )
