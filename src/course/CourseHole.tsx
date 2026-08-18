@@ -2,6 +2,7 @@ import type { GolfHole } from '../courses/courseTypes'
 import { Bunkers } from './Bunkers'
 import { CourseScenery } from './CourseScenery'
 import { Fairway } from './Fairway'
+import { FivePmEnvironment } from './FivePmEnvironment'
 import { Flag } from './Flag'
 import { GrassDetail } from './GrassDetail'
 import { Green } from './Green'
@@ -13,6 +14,7 @@ import { Vegetation } from './Vegetation'
 export function CourseHole({ hole }: { hole: GolfHole }) {
   return (
     <>
+      <FivePmEnvironment />
       <CourseScenery hole={hole} />
       <Terrain hole={hole} />
       <Fairway hole={hole} />
