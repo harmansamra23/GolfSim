@@ -8,13 +8,13 @@ import {
   createCourseShape,
 } from './courseGeometry'
 
-const firstCutNormalScale = new Vector2(1.35, 1.35)
-const fairwayNormalScale = new Vector2(0.55, 0.55)
+const firstCutNormalScale = new Vector2(1.25, 1.25)
+const fairwayNormalScale = new Vector2(0.42, 0.42)
 const pathNormalScale = new Vector2(0.75, 0.75)
 
 export function Fairway({ hole }: { hole: GolfHole }) {
   const firstCutShape = useMemo(
-    () => createCourseShape(hole, 4),
+    () => createCourseShape(hole, 5),
     [hole]
   )
 
@@ -41,7 +41,8 @@ export function Fairway({ hole }: { hole: GolfHole }) {
           normalMap={courseMaterials.firstCut.normalMap}
           normalScale={firstCutNormalScale}
           roughnessMap={courseMaterials.firstCut.roughnessMap}
-          roughness={1}
+          color="#a9c982"
+          roughness={0.94}
         />
       </mesh>
 
@@ -56,7 +57,8 @@ export function Fairway({ hole }: { hole: GolfHole }) {
           normalMap={courseMaterials.fairway.normalMap}
           normalScale={fairwayNormalScale}
           roughnessMap={courseMaterials.fairway.roughnessMap}
-          roughness={0.72}
+          color="#c3df91"
+          roughness={0.6}
         />
       </mesh>
 
@@ -72,6 +74,7 @@ export function Fairway({ hole }: { hole: GolfHole }) {
             normalMap={courseMaterials.path.normalMap}
             normalScale={pathNormalScale}
             roughnessMap={courseMaterials.path.roughnessMap}
+            color="#c7bda4"
             roughness={1}
           />
         </mesh>
