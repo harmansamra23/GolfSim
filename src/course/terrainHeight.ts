@@ -20,30 +20,33 @@ export function terrainHeightAtPosition(
     Math.max(0, Math.abs(z - hole.tee.z) / holeLength)
   )
 
-  const broadRoll =
-    Math.sin(z * 0.018 + hole.number * 0.73) * 0.42 +
-    Math.sin(x * 0.031 - z * 0.009 + hole.number) * 0.24
-
   const center = fairwayCenterX(hole, z)
   const halfWidth = Math.max(8, fairwayHalfWidth(hole, z))
-  const lateral = Math.min(2.5, Math.abs(x - center) / halfWidth)
-  const fairwayCrown = Math.max(0, 1 - lateral) * 0.22
-  const roughRoll = smoothstep(0.8, 2.2, lateral) *
-    Math.sin(x * 0.055 + z * 0.014) * 0.26
+  const lateral = Math.min(3, Math.abs(x - center) / halfWidth)
 
-  const approachLift = smoothstep(0.72, 0.96, along) * 0.34
+  const playableRoll =
+    Math.sin(z * 0.018 + hole.number * 0.73) * 0.08 +
+    Math.sin(x * 0.028 - z * 0.008 + hole.number) * 0.05
+  const crown = Math.max(0, 1 - lateral) * 0.06
 
+  const roughBlend = smoothstep(0.95, 2.35, lateral)
+  const roughRoll = roughBlend * (
+    Math.sin(x * 0.036 + z * 0.013 + hole.number) * 0.34 +
+    Math.sin(x * 0.071 - z * 0.019) * 0.16
+  )
+
+  const approachLift = smoothstep(0.76, 0.98, along) * 0.08
   const teeDistance = Math.hypot(x - hole.tee.x, z - hole.tee.z)
-  const teeBlend = smoothstep(8, 24, teeDistance)
+  const teeBlend = smoothstep(9, 25, teeDistance)
 
   const greenDistance = Math.hypot(
     (x - hole.green.center.x) / Math.max(1, hole.green.radiusX),
     (z - hole.green.center.z) / Math.max(1, hole.green.radiusZ)
   )
-  const greenPlateau = (1 - smoothstep(0.65, 1.65, greenDistance)) * 0.28
+  const greenPlateau = (1 - smoothstep(0.7, 1.55, greenDistance)) * 0.08
 
   return (
-    (broadRoll + fairwayCrown + roughRoll + approachLift) * teeBlend +
+    (playableRoll + crown + roughRoll + approachLift) * teeBlend +
     greenPlateau
   )
 }
