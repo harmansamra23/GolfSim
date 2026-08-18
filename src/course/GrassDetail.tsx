@@ -4,14 +4,15 @@ import * as THREE from 'three'
 
 import type { GolfHole } from '../courses/courseTypes'
 import { getSurfaceAtPosition } from '../physics/surfacePhysics'
+import { terrainHeightAtPosition } from './terrainHeight'
 
 const PATCH_RADIUS = 32
 const REFRESH_DISTANCE = 6
-const SAMPLE_COUNT = 7200
+const SAMPLE_COUNT = 5200
 
-const ROUGH_CAPACITY = 3200
-const FIRST_CUT_CAPACITY = 1800
-const FAIRWAY_CAPACITY = 1400
+const ROUGH_CAPACITY = 2400
+const FIRST_CUT_CAPACITY = 1300
+const FAIRWAY_CAPACITY = 900
 
 function seededRandom(seed: number) {
   const value = Math.sin(seed * 12.9898 + 78.233) * 43758.5453
@@ -21,7 +22,7 @@ function seededRandom(seed: number) {
 type LayerSettings = {
   mesh: THREE.InstancedMesh | null
   capacity: number
-  baseY: number
+  offsetY: number
   minHeight: number
   maxHeight: number
   minWidth: number
@@ -50,32 +51,32 @@ export function GrassDetail({ hole }: { hole: GolfHole }) {
     const rough: LayerSettings = {
       mesh: roughRef.current,
       capacity: ROUGH_CAPACITY,
-      baseY: 0.02,
-      minHeight: 0.16,
-      maxHeight: 0.3,
-      minWidth: 0.035,
-      maxWidth: 0.06,
-      density: 0.92,
+      offsetY: 0.018,
+      minHeight: 0.11,
+      maxHeight: 0.22,
+      minWidth: 0.028,
+      maxWidth: 0.052,
+      density: 0.75,
     }
     const firstCut: LayerSettings = {
       mesh: firstCutRef.current,
       capacity: FIRST_CUT_CAPACITY,
-      baseY: 0.045,
-      minHeight: 0.07,
-      maxHeight: 0.12,
-      minWidth: 0.025,
-      maxWidth: 0.042,
-      density: 0.68,
+      offsetY: 0.038,
+      minHeight: 0.055,
+      maxHeight: 0.1,
+      minWidth: 0.022,
+      maxWidth: 0.038,
+      density: 0.56,
     }
     const fairway: LayerSettings = {
       mesh: fairwayRef.current,
       capacity: FAIRWAY_CAPACITY,
-      baseY: 0.06,
-      minHeight: 0.025,
-      maxHeight: 0.05,
-      minWidth: 0.018,
-      maxWidth: 0.032,
-      density: 0.38,
+      offsetY: 0.052,
+      minHeight: 0.018,
+      maxHeight: 0.04,
+      minWidth: 0.015,
+      maxWidth: 0.028,
+      density: 0.28,
     }
 
     const counts = { rough: 0, firstCut: 0, fairway: 0 }
@@ -134,8 +135,13 @@ export function GrassDetail({ hole }: { hole: GolfHole }) {
         seededRandom(patchSeed + i * 7 + 11)
       )
       const rotation = seededRandom(patchSeed + i * 5 + 19) * Math.PI
+      const terrainY = terrainHeightAtPosition(hole, x, z)
 
-      dummy.current.position.set(x, layer.baseY + height * 0.5, z)
+      dummy.current.position.set(
+        x,
+        terrainY + layer.offsetY + height * 0.5,
+        z
+      )
       dummy.current.rotation.set(0, rotation, 0)
       dummy.current.scale.set(width, height, 1)
       dummy.current.updateMatrix()
@@ -182,8 +188,8 @@ export function GrassDetail({ hole }: { hole: GolfHole }) {
       >
         <planeGeometry args={[1, 1]} />
         <meshStandardMaterial
-          color="#315a35"
-          roughness={0.98}
+          color="#416e3d"
+          roughness={0.96}
           side={THREE.DoubleSide}
         />
       </instancedMesh>
@@ -196,8 +202,8 @@ export function GrassDetail({ hole }: { hole: GolfHole }) {
       >
         <planeGeometry args={[1, 1]} />
         <meshStandardMaterial
-          color="#5d8449"
-          roughness={0.94}
+          color="#78a84f"
+          roughness={0.9}
           side={THREE.DoubleSide}
         />
       </instancedMesh>
@@ -210,8 +216,8 @@ export function GrassDetail({ hole }: { hole: GolfHole }) {
       >
         <planeGeometry args={[1, 1]} />
         <meshStandardMaterial
-          color="#84bd60"
-          roughness={0.84}
+          color="#a4cc6b"
+          roughness={0.78}
           side={THREE.DoubleSide}
         />
       </instancedMesh>
