@@ -42,11 +42,9 @@ export function CameraManager({
 
     if (freeEnabled) return
 
-    // AUTO camera always faces the flag. The camera can move with the ball,
-    // but the pin remains the visual anchor throughout the entire shot.
     desiredTarget.current.set(
       hole.green.center.x,
-      1,
+      0.9,
       hole.green.center.z
     )
 
@@ -56,41 +54,54 @@ export function CameraManager({
       ball.z - hole.green.center.z
     )
 
-    if (awayFromFlag.current.lengthSq() < 0.0001) {
+    const distanceToFlag = awayFromFlag.current.length()
+
+    if (distanceToFlag < 0.01) {
       awayFromFlag.current.set(0, 0, 1)
     } else {
       awayFromFlag.current.normalize()
     }
 
+    const addressBackDistance = THREE.MathUtils.clamp(
+      9 + distanceToFlag * 0.026,
+      11,
+      22
+    )
+    const addressHeight = THREE.MathUtils.clamp(
+      1.75 + distanceToFlag * 0.0018,
+      1.9,
+      2.75
+    )
+
     if (state.phase === 'ADDRESS') {
       desiredPosition.current.set(
-        ball.x + awayFromFlag.current.x * 10,
-        1.8,
-        ball.z + awayFromFlag.current.z * 10
+        ball.x + awayFromFlag.current.x * addressBackDistance,
+        addressHeight,
+        ball.z + awayFromFlag.current.z * addressBackDistance
       )
     } else if (state.phase === 'FLIGHT') {
       desiredPosition.current.set(
         ball.x + awayFromFlag.current.x * 12,
-        ball.y + 5.5,
+        ball.y + 5.2,
         ball.z + awayFromFlag.current.z * 12
       )
     } else if (state.phase === 'LANDING') {
       desiredPosition.current.set(
-        ball.x + awayFromFlag.current.x * 13,
-        ball.y + 5,
-        ball.z + awayFromFlag.current.z * 13
+        ball.x + awayFromFlag.current.x * 12,
+        ball.y + 4.6,
+        ball.z + awayFromFlag.current.z * 12
       )
     } else if (state.phase === 'ROLLING') {
       desiredPosition.current.set(
-        ball.x + awayFromFlag.current.x * 10,
-        4,
-        ball.z + awayFromFlag.current.z * 10
+        ball.x + awayFromFlag.current.x * 9,
+        3.6,
+        ball.z + awayFromFlag.current.z * 9
       )
     } else {
       desiredPosition.current.set(
-        ball.x + awayFromFlag.current.x * 10,
-        4.5,
-        ball.z + awayFromFlag.current.z * 10
+        ball.x + awayFromFlag.current.x * 9,
+        4,
+        ball.z + awayFromFlag.current.z * 9
       )
     }
 
@@ -110,7 +121,7 @@ export function CameraManager({
       enableDamping
       dampingFactor={0.08}
       minDistance={2}
-      maxDistance={120}
+      maxDistance={160}
       maxPolarAngle={Math.PI * 0.48}
     />
   )

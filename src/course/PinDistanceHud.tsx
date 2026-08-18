@@ -56,10 +56,13 @@ export function PinDistanceHud({
     <Html
       position={[
         hole.green.center.x,
-        16,
+        14,
         hole.green.center.z,
       ]}
       center
+      distanceFactor={22}
+      transform
+      sprite
       zIndexRange={[30, 0]}
     >
       <div className="pin-distance-hud">
