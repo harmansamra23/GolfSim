@@ -6,35 +6,36 @@ import {
   fairwayCenterX,
   fairwayHalfWidth,
 } from '../courses/holeGeometryMath'
+import { terrainHeightAtPosition } from './terrainHeight'
 
 type TreeInstance = {
   position: THREE.Vector3
   scale: number
   rotation: number
-  valleyStyle: boolean
+  variant: 0 | 1 | 2
 }
 
 const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.82, 6.2, 8)
 const trunkMaterial = new THREE.MeshStandardMaterial({
-  color: '#4b3524',
-  roughness: 0.96,
+  color: '#543e2b',
+  roughness: 0.98,
 })
 const canopyGeometry = new THREE.IcosahedronGeometry(2.2, 1)
 const canopyMaterialA = new THREE.MeshStandardMaterial({
-  color: '#315b31',
-  roughness: 0.94,
+  color: '#3d6839',
+  roughness: 0.96,
 })
 const canopyMaterialB = new THREE.MeshStandardMaterial({
-  color: '#3d6c38',
-  roughness: 0.94,
+  color: '#4c7843',
+  roughness: 0.95,
 })
 const canopyMaterialC = new THREE.MeshStandardMaterial({
-  color: '#2f5830',
-  roughness: 0.94,
+  color: '#345f35',
+  roughness: 0.96,
 })
 const canopyMaterialD = new THREE.MeshStandardMaterial({
-  color: '#47753f',
-  roughness: 0.94,
+  color: '#587f49',
+  roughness: 0.95,
 })
 
 export function Vegetation({ hole }: { hole: GolfHole }) {
@@ -45,7 +46,7 @@ export function Vegetation({ hole }: { hole: GolfHole }) {
 
 function createTreeInstances(hole: GolfHole): TreeInstance[] {
   const valleyStyle = hole.environmentStyle === 'SACRAMENTO_VALLEY'
-  const rowCount = valleyStyle ? 16 : 11
+  const rowCount = valleyStyle ? 18 : 12
   const instances: TreeInstance[] = []
 
   for (let index = 0; index < rowCount; index += 1) {
@@ -55,29 +56,54 @@ function createTreeInstances(hole: GolfHole): TreeInstance[] {
       (hole.fairway.endZ - hole.fairway.startZ) * t
     const center = fairwayCenterX(hole, z)
     const width = fairwayHalfWidth(hole, z)
-    const edgeGap = valleyStyle ? 10 : 13
+    const leftGap = valleyStyle ? 13 + (index % 4) * 3 : 14
+    const rightGap = valleyStyle ? 15 + ((index + 2) % 5) * 2.5 : 14
+
+    const leftX = center - width - leftGap
+    const rightX = center + width + rightGap
+    const leftZ = z - (index % 3) * 4
+    const rightZ = z - ((index + 1) % 4) * 5
 
     instances.push({
       position: new THREE.Vector3(
-        center - width - edgeGap - (index % 3) * 2,
-        0,
-        z
+        leftX,
+        terrainHeightAtPosition(hole, leftX, leftZ),
+        leftZ
       ),
-      scale: (valleyStyle ? 1.18 : 1) + (index % 4) * 0.08,
-      rotation: -0.65 + (index % 5) * 0.28,
-      valleyStyle,
+      scale: 0.9 + (index % 5) * 0.12,
+      rotation: -0.78 + (index % 6) * 0.29,
+      variant: (index % 3) as 0 | 1 | 2,
     })
 
-    instances.push({
-      position: new THREE.Vector3(
-        center + width + edgeGap + ((index + 1) % 3) * 2,
-        0,
-        z - (valleyStyle && index % 2 ? 6 : 0)
-      ),
-      scale: (valleyStyle ? 1.22 : 1.05) + ((index + 2) % 4) * 0.07,
-      rotation: 0.6 - (index % 5) * 0.25,
-      valleyStyle,
-    })
+    if (index % 6 !== 2) {
+      instances.push({
+        position: new THREE.Vector3(
+          rightX,
+          terrainHeightAtPosition(hole, rightX, rightZ),
+          rightZ
+        ),
+        scale: 0.94 + ((index + 3) % 6) * 0.105,
+        rotation: 0.72 - (index % 7) * 0.22,
+        variant: ((index + 1) % 3) as 0 | 1 | 2,
+      })
+    }
+
+    if (valleyStyle && index % 5 === 1) {
+      const clusterSide = index % 2 === 0 ? -1 : 1
+      const clusterX = center + clusterSide * (width + 28)
+      const clusterZ = z - 11
+
+      instances.push({
+        position: new THREE.Vector3(
+          clusterX,
+          terrainHeightAtPosition(hole, clusterX, clusterZ),
+          clusterZ
+        ),
+        scale: 0.72 + (index % 3) * 0.08,
+        rotation: index * 0.37,
+        variant: 2,
+      })
+    }
   }
 
   return instances
@@ -110,19 +136,17 @@ function InstancedOakRows({ instances }: { instances: TreeInstance[] }) {
     const up = new THREE.Vector3(0, 1, 0)
 
     const canopyPositions = [
-      new THREE.Vector3(0, 7.4, 0),
-      new THREE.Vector3(2, 6.95, 0.35),
-      new THREE.Vector3(-2, 7.05, -0.2),
-      new THREE.Vector3(0.35, 8.45, -0.25),
-    ]
-    const canopyScales = [
-      new THREE.Vector3(2.05, 1.02, 1.72),
-      new THREE.Vector3(1.45, 0.78, 1.28),
-      new THREE.Vector3(1.48, 0.8, 1.3),
-      new THREE.Vector3(1.2, 0.67, 1.08),
+      new THREE.Vector3(0, 7.2, 0),
+      new THREE.Vector3(2.15, 6.7, 0.45),
+      new THREE.Vector3(-2.05, 6.82, -0.3),
+      new THREE.Vector3(0.25, 8.25, -0.15),
     ]
 
     instances.forEach((tree, index) => {
+      const variant = tree.variant
+      const heightScale = variant === 0 ? 0.92 : variant === 1 ? 1.16 : 0.78
+      const widthScale = variant === 0 ? 1.18 : variant === 1 ? 0.84 : 1.35
+
       treeQuaternion.setFromAxisAngle(up, tree.rotation)
       treeMatrix.compose(
         tree.position,
@@ -131,24 +155,32 @@ function InstancedOakRows({ instances }: { instances: TreeInstance[] }) {
       )
 
       localMatrix.compose(
-        new THREE.Vector3(0, tree.valleyStyle ? 3.2 : 2.8, 0),
+        new THREE.Vector3(0, 3.05 * heightScale, 0),
         localQuaternion,
-        new THREE.Vector3(
-          tree.valleyStyle ? 1 : 0.76,
-          tree.valleyStyle ? 1.03 : 0.9,
-          tree.valleyStyle ? 1 : 0.76
-        )
+        new THREE.Vector3(0.88, heightScale, 0.88)
       )
       finalMatrix.multiplyMatrices(treeMatrix, localMatrix)
       trunkMesh.setMatrixAt(index, finalMatrix)
 
       canopyMeshes.forEach((canopy, canopyIndex) => {
-        const position = tree.valleyStyle
-          ? canopyPositions[canopyIndex]
-          : canopyPositions[canopyIndex].clone().multiplyScalar(0.9)
-        const scale = tree.valleyStyle
-          ? canopyScales[canopyIndex]
-          : canopyScales[canopyIndex].clone().multiplyScalar(0.8)
+        const base = canopyPositions[canopyIndex]
+        const sideBias = variant === 2 ? 1.18 : 1
+        const position = new THREE.Vector3(
+          base.x * widthScale * sideBias,
+          base.y * heightScale,
+          base.z * widthScale
+        )
+        const baseScale =
+          canopyIndex === 0
+            ? new THREE.Vector3(2.1, 1.0, 1.7)
+            : canopyIndex === 3
+              ? new THREE.Vector3(1.18, 0.66, 1.05)
+              : new THREE.Vector3(1.48, 0.76, 1.25)
+        const scale = new THREE.Vector3(
+          baseScale.x * widthScale,
+          baseScale.y * heightScale,
+          baseScale.z * widthScale
+        )
 
         localMatrix.compose(position, localQuaternion, scale)
         finalMatrix.multiplyMatrices(treeMatrix, localMatrix)
