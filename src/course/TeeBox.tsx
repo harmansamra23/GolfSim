@@ -1,20 +1,23 @@
 import { courseMaterials } from '../components/simulator/CourseMaterials'
 import type { GolfHole } from '../courses/courseTypes'
+import { terrainHeightAtPosition } from './terrainHeight'
 
 export function TeeBox({ hole }: { hole: GolfHole }) {
+  const teeY = terrainHeightAtPosition(hole, hole.tee.x, hole.tee.z)
+
   return (
     <>
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[hole.tee.x, 0.055, hole.tee.z]}
+        position={[hole.tee.x, teeY + 0.055, hole.tee.z]}
         receiveShadow
       >
-        <planeGeometry args={[11, 8]} />
+        <planeGeometry args={[11, 8, 6, 5]} />
         <meshStandardMaterial
           map={courseMaterials.tee.map}
           normalMap={courseMaterials.tee.normalMap}
           roughnessMap={courseMaterials.tee.roughnessMap}
-          roughness={0.82}
+          roughness={0.76}
         />
       </mesh>
 
@@ -31,11 +34,14 @@ function TeeMarker({
   hole: GolfHole
   x: number
 }) {
+  const markerX = hole.tee.x + x
+  const markerY = terrainHeightAtPosition(hole, markerX, hole.tee.z)
+
   return (
     <mesh
       position={[
-        hole.tee.x + x,
-        0.22,
+        markerX,
+        markerY + 0.22,
         hole.tee.z,
       ]}
       castShadow

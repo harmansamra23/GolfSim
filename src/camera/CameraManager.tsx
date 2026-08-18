@@ -5,6 +5,7 @@ import * as THREE from 'three'
 
 import type { BallStateReader } from '../ball/BallState'
 import type { GolfHole } from '../courses/courseTypes'
+import { terrainHeightAtPosition } from '../course/terrainHeight'
 
 export type CameraPreference = 'AUTO' | 'FREE'
 
@@ -24,6 +25,7 @@ export function CameraManager({
   const desiredPosition = useRef(new THREE.Vector3())
   const desiredTarget = useRef(new THREE.Vector3())
   const awayFromFlag = useRef(new THREE.Vector3())
+  const lateral = useRef(new THREE.Vector3())
 
   useFrame((_, delta) => {
     const state = getBallState()
@@ -42,9 +44,15 @@ export function CameraManager({
 
     if (freeEnabled) return
 
+    const pinGroundY = terrainHeightAtPosition(
+      hole,
+      hole.green.center.x,
+      hole.green.center.z
+    )
+
     desiredTarget.current.set(
       hole.green.center.x,
-      0.9,
+      pinGroundY + 0.8,
       hole.green.center.z
     )
 
@@ -62,46 +70,58 @@ export function CameraManager({
       awayFromFlag.current.normalize()
     }
 
+    lateral.current.set(
+      awayFromFlag.current.z,
+      0,
+      -awayFromFlag.current.x
+    )
+
     const addressBackDistance = THREE.MathUtils.clamp(
-      9 + distanceToFlag * 0.026,
-      11,
-      22
+      10 + distanceToFlag * 0.05,
+      14,
+      32
     )
-    const addressHeight = THREE.MathUtils.clamp(
-      1.75 + distanceToFlag * 0.0018,
-      1.9,
-      2.75
+    const lateralOffset = THREE.MathUtils.clamp(
+      1.4 + distanceToFlag * 0.004,
+      1.6,
+      3.2
     )
+    const ballGroundY = terrainHeightAtPosition(hole, ball.x, ball.z)
+    const addressHeight = ballGroundY + 1.72
 
     if (state.phase === 'ADDRESS') {
       desiredPosition.current.set(
-        ball.x + awayFromFlag.current.x * addressBackDistance,
+        ball.x +
+          awayFromFlag.current.x * addressBackDistance +
+          lateral.current.x * lateralOffset,
         addressHeight,
-        ball.z + awayFromFlag.current.z * addressBackDistance
+        ball.z +
+          awayFromFlag.current.z * addressBackDistance +
+          lateral.current.z * lateralOffset
       )
     } else if (state.phase === 'FLIGHT') {
       desiredPosition.current.set(
-        ball.x + awayFromFlag.current.x * 12,
+        ball.x + awayFromFlag.current.x * 12 + lateral.current.x * 1.8,
         ball.y + 5.2,
-        ball.z + awayFromFlag.current.z * 12
+        ball.z + awayFromFlag.current.z * 12 + lateral.current.z * 1.8
       )
     } else if (state.phase === 'LANDING') {
       desiredPosition.current.set(
-        ball.x + awayFromFlag.current.x * 12,
-        ball.y + 4.6,
-        ball.z + awayFromFlag.current.z * 12
+        ball.x + awayFromFlag.current.x * 12 + lateral.current.x * 2.2,
+        ball.y + 4.5,
+        ball.z + awayFromFlag.current.z * 12 + lateral.current.z * 2.2
       )
     } else if (state.phase === 'ROLLING') {
       desiredPosition.current.set(
-        ball.x + awayFromFlag.current.x * 9,
-        3.6,
-        ball.z + awayFromFlag.current.z * 9
+        ball.x + awayFromFlag.current.x * 9 + lateral.current.x * 2,
+        ballGroundY + 3.1,
+        ball.z + awayFromFlag.current.z * 9 + lateral.current.z * 2
       )
     } else {
       desiredPosition.current.set(
-        ball.x + awayFromFlag.current.x * 9,
-        4,
-        ball.z + awayFromFlag.current.z * 9
+        ball.x + awayFromFlag.current.x * 9 + lateral.current.x * 2,
+        ballGroundY + 3.4,
+        ball.z + awayFromFlag.current.z * 9 + lateral.current.z * 2
       )
     }
 
@@ -121,7 +141,7 @@ export function CameraManager({
       enableDamping
       dampingFactor={0.08}
       minDistance={2}
-      maxDistance={160}
+      maxDistance={180}
       maxPolarAngle={Math.PI * 0.48}
     />
   )
