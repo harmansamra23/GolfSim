@@ -44,7 +44,7 @@ export function CameraManager({
 
     desiredTarget.current.set(
       hole.green.center.x,
-      0.9,
+      0.72,
       hole.green.center.z
     )
 
@@ -63,14 +63,14 @@ export function CameraManager({
     }
 
     const addressBackDistance = THREE.MathUtils.clamp(
-      9 + distanceToFlag * 0.026,
-      11,
-      22
+      10 + distanceToFlag * 0.045,
+      13,
+      30
     )
     const addressHeight = THREE.MathUtils.clamp(
-      1.75 + distanceToFlag * 0.0018,
-      1.9,
-      2.75
+      1.7 + distanceToFlag * 0.00055,
+      1.72,
+      2.04
     )
 
     if (state.phase === 'ADDRESS') {
@@ -94,13 +94,13 @@ export function CameraManager({
     } else if (state.phase === 'ROLLING') {
       desiredPosition.current.set(
         ball.x + awayFromFlag.current.x * 9,
-        3.6,
+        3.2,
         ball.z + awayFromFlag.current.z * 9
       )
     } else {
       desiredPosition.current.set(
         ball.x + awayFromFlag.current.x * 9,
-        4,
+        3.6,
         ball.z + awayFromFlag.current.z * 9
       )
     }
@@ -121,7 +121,7 @@ export function CameraManager({
       enableDamping
       dampingFactor={0.08}
       minDistance={2}
-      maxDistance={160}
+      maxDistance={180}
       maxPolarAngle={Math.PI * 0.48}
     />
   )
