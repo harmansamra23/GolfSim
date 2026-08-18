@@ -8,11 +8,11 @@ import { terrainHeightAtPosition } from './terrainHeight'
 
 const PATCH_RADIUS = 32
 const REFRESH_DISTANCE = 6
-const SAMPLE_COUNT = 5200
+const SAMPLE_COUNT = 4600
 
-const ROUGH_CAPACITY = 2400
-const FIRST_CUT_CAPACITY = 1300
-const FAIRWAY_CAPACITY = 900
+const ROUGH_CAPACITY = 2000
+const FIRST_CUT_CAPACITY = 1050
+const FAIRWAY_CAPACITY = 620
 
 function seededRandom(seed: number) {
   const value = Math.sin(seed * 12.9898 + 78.233) * 43758.5453
@@ -51,32 +51,32 @@ export function GrassDetail({ hole }: { hole: GolfHole }) {
     const rough: LayerSettings = {
       mesh: roughRef.current,
       capacity: ROUGH_CAPACITY,
-      offsetY: 0.018,
-      minHeight: 0.11,
-      maxHeight: 0.22,
-      minWidth: 0.028,
-      maxWidth: 0.052,
-      density: 0.75,
+      offsetY: 0.014,
+      minHeight: 0.09,
+      maxHeight: 0.18,
+      minWidth: 0.022,
+      maxWidth: 0.038,
+      density: 0.62,
     }
     const firstCut: LayerSettings = {
       mesh: firstCutRef.current,
       capacity: FIRST_CUT_CAPACITY,
-      offsetY: 0.038,
-      minHeight: 0.055,
-      maxHeight: 0.1,
-      minWidth: 0.022,
-      maxWidth: 0.038,
-      density: 0.56,
+      offsetY: 0.03,
+      minHeight: 0.045,
+      maxHeight: 0.075,
+      minWidth: 0.018,
+      maxWidth: 0.03,
+      density: 0.38,
     }
     const fairway: LayerSettings = {
       mesh: fairwayRef.current,
       capacity: FAIRWAY_CAPACITY,
-      offsetY: 0.052,
-      minHeight: 0.018,
-      maxHeight: 0.04,
-      minWidth: 0.015,
-      maxWidth: 0.028,
-      density: 0.28,
+      offsetY: 0.045,
+      minHeight: 0.014,
+      maxHeight: 0.026,
+      minWidth: 0.012,
+      maxWidth: 0.022,
+      density: 0.14,
     }
 
     const counts = { rough: 0, firstCut: 0, fairway: 0 }
@@ -188,8 +188,8 @@ export function GrassDetail({ hole }: { hole: GolfHole }) {
       >
         <planeGeometry args={[1, 1]} />
         <meshStandardMaterial
-          color="#416e3d"
-          roughness={0.96}
+          color="#29482a"
+          roughness={1}
           side={THREE.DoubleSide}
         />
       </instancedMesh>
@@ -202,8 +202,8 @@ export function GrassDetail({ hole }: { hole: GolfHole }) {
       >
         <planeGeometry args={[1, 1]} />
         <meshStandardMaterial
-          color="#78a84f"
-          roughness={0.9}
+          color="#4f763c"
+          roughness={0.97}
           side={THREE.DoubleSide}
         />
       </instancedMesh>
@@ -216,8 +216,8 @@ export function GrassDetail({ hole }: { hole: GolfHole }) {
       >
         <planeGeometry args={[1, 1]} />
         <meshStandardMaterial
-          color="#a4cc6b"
-          roughness={0.78}
+          color="#6f9f48"
+          roughness={0.92}
           side={THREE.DoubleSide}
         />
       </instancedMesh>
